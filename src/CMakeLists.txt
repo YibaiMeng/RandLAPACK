@@ -5,6 +5,7 @@ set(RandLAPACK_cxx_srcs
     comps/rs.cc
     comps/util.cc
     comps/orth.cc
+    comps/rsvd.cc
 )
 
 set(RandLAPACK_libs
@@ -15,17 +16,20 @@ set(RandLAPACK_libs
     RandBLAS_OpenMP
 )
 
+set_source_files_properties(${RandLAPACK_cxx_srcs} PROPERTIES LANGUAGE CUDA)
 add_library(RandLAPACK ${RandLAPACK_cxx_srcs})
-
 target_include_directories(
     RandLAPACK PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/RandLAPACK>
     $<INSTALL_INTERFACE:include>
     $<INSTALL_INTERFACE:include/RandLAPACK>
+    ${Hamr_DIR}/include
 )
 
-target_link_libraries(RandLAPACK PUBLIC ${RandLAPACK_libs})
+target_link_libraries(RandLAPACK PUBLIC ${RandLAPACK_libs} hamr)
+set_target_properties(RandLAPACK PROPERTIES LANGUAGE CUDA CUDA_ARCHITECTURES 61 CUDA_SEPARABLE_COMPILATION ON CXX_STANDARD 17)
+
 
 install(
     DIRECTORY "${CMAKE_SOURCE_DIR}/include/"

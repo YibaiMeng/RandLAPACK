@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
-
-project(RandLAPACK)
+SET(CUDA_SEPARABLE_COMPILATION ON)
+project(RandLAPACK LANGUAGES CUDA CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
 
@@ -13,8 +13,14 @@ include(version)
 # find dependencies
 include(RandLAPACK_RandBLAS)
 include(lapackpp)
+include(hamr)
 
 # compile sources
+enable_language(CUDA)
+add_compile_definitions(HAMR_ENABLE_CUDA)
+include(${Hamr_DIR}/lib/hamr.cmake)
+#include(/home/eecs/mengyibai/proj/BallisticLA/HAMR-install/lib/hamr-release.cmake)
+# TODO: find a way to enable this automatically
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(benchmark)
