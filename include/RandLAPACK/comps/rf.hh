@@ -5,6 +5,7 @@
 
 #include "rs.hh"
 #include "orth.hh"
+#include <hamr_buffer.h>
 
 namespace RandLAPACK::comps::rf {
 
@@ -18,9 +19,9 @@ class RangeFinder
                 virtual void call(
                         int64_t m,
                         int64_t n,
-                        const std::vector<T>& A,
+                        const hamr::buffer<T>& A,
                         int64_t k,
-                        std::vector<T>& Q
+                        hamr::buffer<T>& Q
                 ) = 0;    
 };
 
@@ -33,10 +34,7 @@ class RF : public RangeFinder<T>
                 RandLAPACK::comps::orth::Stabilization<T>& Orth_Obj;
                 bool verbosity;
                 bool cond_check;
-                std::vector<T> Omega;
 
-                std::vector<T> Q_cpy;
-                std::vector<T> s;
 
                 // Controls RF version to be used
                 int decision_RF;
@@ -61,18 +59,18 @@ class RF : public RangeFinder<T>
                 void rf1(
                         int64_t m,
                         int64_t n,
-                        const std::vector<T>& A,
+                        const hamr::buffer<T>& A,
                         int64_t k,
-                        std::vector<T>& Q
+                        hamr::buffer<T> & Q
                 );
 
                 // Control of RF types calls.
                 virtual void call(
                         int64_t m,
                         int64_t n,
-                        const std::vector<T>& A,
+                        const hamr::buffer<T>& A,
                         int64_t k,
-                        std::vector<T>& Q
+                        hamr::buffer<T>& Q
                 ){
                         switch(this->decision_RF)
                         {

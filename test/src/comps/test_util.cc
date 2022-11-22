@@ -11,6 +11,7 @@ TODO #4: L & pivotig tests.
 #include <RandBLAS.hh>
 #include <RandLAPACK.hh>
 #include <math.h>
+#include <hamr_buffer.h>
 
 #include <chrono>
 using namespace std::chrono;

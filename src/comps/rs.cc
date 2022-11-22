@@ -1,6 +1,7 @@
 #include <lapack.hh>
 #include <RandBLAS.hh>
 #include <RandLAPACK.hh>
+#include <hamr_buffer.h>
 
 using namespace RandLAPACK::comps::util;
 
@@ -10,9 +11,9 @@ template <typename T>
 void RS<T>::rs1(
 	int64_t m,
 	int64_t n,
-	const std::vector<T>& A,
+	const hamr::buffer<T>& A,
 	int64_t k,
-	std::vector<T>& Omega 
+	hamr::buffer<T>& Omega 
 ){
 	using namespace blas;
 	using namespace lapack;
@@ -24,7 +25,9 @@ void RS<T>::rs1(
 
 	const T* A_dat = A.data();
 	T* Omega_dat = Omega.data();
-	T* Omega_1_dat = upsize<T>(m * k, this->Omega_1);
+	hamr::buffer<T> Omega_1(A.get_allocator(), m * k);
+
+	T* Omega_1_dat = Omega_1.data();
 
 	if (p % 2 == 0) 
 	{
@@ -57,7 +60,7 @@ void RS<T>::rs1(
 		}
 
 		if(this->cond_check)
-			cond_num_check<T>(m, k, Omega_1, this->Omega_1_cpy, this->s, this->cond_nums, this->verbosity);
+			cond_num_check<T>(m, k, Omega_1, this->cond_nums, this->verbosity);
 
 		// Omega = A' * Omega
 		gemm<T>(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A_dat, m, Omega_1_dat, m, 0.0, Omega_dat, n);
@@ -68,12 +71,12 @@ void RS<T>::rs1(
 		}
 		
 		if(this->cond_check)
-			cond_num_check<T>(n, k, Omega, this->Omega_cpy, this->s, this->cond_nums, this->verbosity);
+			cond_num_check<T>(n, k, Omega, this->cond_nums, this->verbosity);
 	}
 	// Increment seed upon termination
 	this->seed += m * n;
 }
 
-template void RS<float>::rs1(int64_t m, int64_t n, const std::vector<float>& A, int64_t k, std::vector<float>& Omega);
-template void RS<double>::rs1(int64_t m, int64_t n, const std::vector<double>& A, int64_t k, std::vector<double>& Omega);
+template void RS<float>::rs1(int64_t m, int64_t n, const hamr::buffer<float>& A, int64_t k, hamr::buffer<float>& Omega);
+template void RS<double>::rs1(int64_t m, int64_t n, const hamr::buffer<double>& A, int64_t k, hamr::buffer<double>& Omega);
 } // end namespace RandLAPACK::comps::rs

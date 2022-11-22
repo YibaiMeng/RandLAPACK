@@ -8,6 +8,7 @@ TODO #1: Switch tuples to vectors.
 #include <RandLAPACK.hh>
 #include <math.h>
 #include <lapack.hh>
+#include <hamr_buffer.h>
 
 #include <numeric>
 #include <iostream>
@@ -33,16 +34,16 @@ class BenchmarkOrth : public ::testing::Test
 
     template <typename T>
     static std::tuple<long, long, long, long> 
-    test_speed_helper(int64_t m, int64_t n, uint32_t seed) {
+    test_speed_helper(int64_t m, int64_t n, uint32_t seed, hamr::buffer_allocator alloc) {
     
         using namespace blas;
         using namespace lapack;
 
         int64_t size = m * n;
-        std::vector<T> A(size, 0.0);
-        std::vector<T> A_cpy(size, 0.0);
-        std::vector<T> A_cpy_2(size, 0.0);
-        std::vector<T> A_cpy_3(size, 0.0);
+        hamr::buffer<T> A(alloc, size, 0.0);
+        hamr::buffer<T> A_cpy(alloc, size, 0.0);
+        hamr::buffer<T> A_cpy_2(alloc, size, 0.0);
+        hamr::buffer<T> A_cpy_3(alloc, size, 0.0);
 	    
         T* A_dat = A.data();
         T* A_cpy_dat = A_cpy.data();

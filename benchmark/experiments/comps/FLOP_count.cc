@@ -3,6 +3,7 @@
 #include <RandBLAS.hh>
 #include <RandLAPACK.hh>
 #include <math.h>
+#include <hamr_buffer.h>
 
 #include <chrono>
 using namespace std::chrono;
@@ -20,7 +21,7 @@ class BenchmarkUtil : public ::testing::Test
 
     template <typename T>
     static void 
-    test_flops(int k, uint32_t seed)
+    test_flops(int k, uint32_t seed，hamr::buffer_allocator alloc)
     {
         printf("|===================================TEST SYSTEM FLOPS BEGIN====================================|\n");
         int size = k * k;
@@ -36,9 +37,9 @@ class BenchmarkUtil : public ::testing::Test
         for (int i = 0; i < runs; ++i)
         {
             using namespace blas;
-            std::vector<T> A(size, 0.0);
-            std::vector<T> B(size, 0.0);
-            std::vector<T> C(size, 0.0);
+            hamr::buffer<T> A(alloc, size, 0.0);
+            hamr::buffer<T> B(alloc, size, 0.0);
+            hamr::buffer<T> C(alloc, size, 0.0);
 
             T* A_dat = A.data();
             T* B_dat = B.data();

@@ -2,6 +2,7 @@
 #include <blas.hh>
 #define BLAS_HH
 #endif
+#include <hamr_buffer.h>
 
 namespace RandLAPACK::comps::util {
 
@@ -9,7 +10,7 @@ template <typename T>
 void eye(
         int64_t m,
         int64_t n,
-        std::vector<T>& A
+        hamr::buffer<T>& A
 );
 
 /*
@@ -19,7 +20,7 @@ template <typename T>
 void get_L(
         int64_t m,
         int64_t n,
-        std::vector<T>& L
+        hamr::buffer<T>& L
 );
 
 /*
@@ -29,9 +30,9 @@ template <typename T>
 void diag(
         int64_t m,
         int64_t n,
-        const std::vector<T>& s,
+        const hamr::buffer<T>& s,
         int64_t k,
-        std::vector<T>& S
+        hamr::buffer<T>& S
 );
 
 /*
@@ -42,15 +43,15 @@ void disp_diag(
         int64_t m,
         int64_t n,
         int64_t k, 
-        std::vector<T>& A 
+        hamr::buffer<T>& A 
 );
 
 template <typename T> 
 void swap_rows(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
-        const std::vector<int64_t>& p
+        hamr::buffer<T>& A,
+        const hamr::buffer<int64_t>& p
 );
 
 /*
@@ -59,14 +60,14 @@ Checks if the given size is larger than available. If so, resizes the vector.
 template <typename T> 
 T* upsize(
         int64_t target_sz,
-        std::vector<T>& A
+        hamr::buffer<T>& A
 );
 
 template <typename T> 
 T* row_resize(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k
 );
 
@@ -78,7 +79,7 @@ template <typename T>
 void gen_mat_type(
         int64_t& m, // These may change
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k, 
         int32_t seed,
         std::tuple<int, T, bool> type
@@ -95,7 +96,7 @@ template <typename T>
 void gen_poly_mat(
         int64_t& m,
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
         T t, // controls the decay. The higher the value, the faster the decay
         bool diagon,
@@ -113,7 +114,7 @@ template <typename T>
 void gen_exp_mat(
         int64_t& m,
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
         T t, // controls the decay. The higher the value, the faster the decay
         bool diagon,
@@ -131,7 +132,7 @@ template <typename T>
 void gen_s_mat(
         int64_t& m,
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
         bool diagon,
         int32_t seed
@@ -144,9 +145,9 @@ template <typename T>
 void gen_mat(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
-        std::vector<T>& S,
+        hamr::buffer<T>& S,
         int32_t seed
 );
 
@@ -157,9 +158,7 @@ template <typename T>
 void cond_num_check(
         int64_t m,
         int64_t n,
-        const std::vector<T>& A,
-        std::vector<T>& A_cpy,
-        std::vector<T>& s,
+        const hamr::buffer<T>& A,
         std::vector<T>& cond_nums,
         bool verbosity
 );
@@ -172,8 +171,8 @@ bool orthogonality_check(
         int64_t m,
         int64_t n,
         int64_t k,
-        const std::vector<T>& A,
-        std::vector<T>& A_gram,
+        const hamr::buffer<T>& A,
+        hamr::buffer<T>& A_gram,
         bool verbosity
 );
 

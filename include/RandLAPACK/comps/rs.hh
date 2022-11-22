@@ -4,6 +4,7 @@
 #endif
 
 #include "orth.hh"
+#include <hamr_buffer.h>
 
 namespace RandLAPACK::comps::rs {
 
@@ -17,9 +18,9 @@ class RowSketcher
 		virtual void call(
 			int64_t m,
 			int64_t n,
-			const std::vector<T>& A,
+			const hamr::buffer<T>& A,
 			int64_t k,
-			std::vector<T>& Omega 
+			hamr::buffer<T>& Omega 
 		) = 0;
 };
 
@@ -35,12 +36,8 @@ class RS : public RowSketcher<T>
 		bool verbosity;
 		bool cond_check;
 		int decision_RS;
-		std::vector<T> Omega_1;
 		std::vector<T> cond_nums;
 
-		std::vector<T> Omega_cpy;
-		std::vector<T> Omega_1_cpy;
-		std::vector<T> s;
 
 		RS(
 			RandLAPACK::comps::orth::Stabilization<T>& stab_obj,
@@ -64,17 +61,17 @@ class RS : public RowSketcher<T>
 		void rs1(
 			int64_t m,
 			int64_t n,
-			const std::vector<T>& A,
+			const hamr::buffer<T>& A,
 			int64_t k,
-			std::vector<T>& Omega 
+			hamr::buffer<T>& Omega 
 		);
 
 		virtual void call(
 			int64_t m,
 			int64_t n,
-			const std::vector<T>& A,
+			const hamr::buffer<T>& A,
 			int64_t k,
-			std::vector<T>& Omega 
+			hamr::buffer<T>& Omega 
 		){
 			switch(this->decision_RS)
 			{

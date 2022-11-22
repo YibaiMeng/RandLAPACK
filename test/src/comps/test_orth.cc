@@ -8,6 +8,7 @@ TODO #1: Switch tuples to vectors.
 #include <RandLAPACK.hh>
 #include <math.h>
 #include <lapack.hh>
+#include <hamr_buffer.h>
 
 #include <numeric>
 #include <iostream>
@@ -33,13 +34,13 @@ class TestOrth : public ::testing::Test
 
 
     template <typename T>
-    static void test_Chol_QR(int64_t m, int64_t n, std::tuple<int, T, bool> mat_type, uint32_t seed) {
+    static void test_Chol_QR(int64_t m, int64_t n, std::tuple<int, T, bool> mat_type, uint32_t seed, hamr::buffer_allocator alloc) {
     
         using namespace blas;
 
         int64_t size = m * n;
-        std::vector<T> A(size);
-        std::vector<T> I_ref(n * n, 0.0);
+        hamr::buffer<T> A(alloc, size);
+        hamr::buffer<T> I_ref(alloc, n * n, 0.0);
 
         T* A_dat = A.data();
         T* I_ref_dat = I_ref.data();
@@ -70,15 +71,15 @@ class TestOrth : public ::testing::Test
     }
 
     template <typename T>
-    static void test_orth_sketch(int64_t m, int64_t n, int64_t k, std::tuple<int, T, bool> mat_type, uint32_t seed) {
+    static void test_orth_sketch(int64_t m, int64_t n, int64_t k, std::tuple<int, T, bool> mat_type, uint32_t seed, hamr::buffer_allocator alloc) {
     
         using namespace blas;
 
         int64_t size = m * n;
-        std::vector<T> A(size, 0.0);
-        std::vector<T> Y(m * k, 0.0);
-        std::vector<T> Omega(n * k, 0.0);
-        std::vector<T> I_ref(k * k, 0.0);
+        hamr::buffer<T> A(alloc, size, 0.0);
+        hamr::buffer<T> Y(alloc, m * k, 0.0);
+        hamr::buffer<T> Omega(alloc, n * k, 0.0);
+        hamr::buffer<T> I_ref(alloc, k * k, 0.0);
 
         T* A_dat = A.data();
         T* Y_dat = Y.data();

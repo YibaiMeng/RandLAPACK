@@ -10,6 +10,7 @@ customized user implementations might behave.
 #include <blas.hh>
 #define BLAS_HH
 #endif
+#include <hamr_buffer.h>
 
 #include "orth.hh"
 #include "rf.hh"
@@ -26,12 +27,12 @@ class QBalg
                 virtual void call(
                         int64_t m,
                         int64_t n,
-                        std::vector<T>& A,
+                        hamr::buffer<T>& A,
                         int64_t& k,
                         int64_t block_sz,
                         T tol,
-                        std::vector<T>& Q,
-                        std::vector<T>& B
+                        hamr::buffer<T>& Q,
+                        hamr::buffer<T>& B
                 ) = 0;
 };
 
@@ -44,12 +45,12 @@ class QB : public QBalg<T>
                 bool verbosity;
                 bool orth_check;
 
-                std::vector<T> Q_gram;
-                std::vector<T> Q_i_gram;
+                hamr::buffer<T> Q_gram;
+                hamr::buffer<T> Q_i_gram;
 
-                std::vector<T> QtQi; 
-                std::vector<T> Q_i;
-                std::vector<T> B_i;
+                hamr::buffer<T> QtQi; 
+                hamr::buffer<T> Q_i;
+                hamr::buffer<T> B_i;
 
                 // Controls QB version to be used
                 int decision_QB;
@@ -73,8 +74,10 @@ class QB : public QBalg<T>
                         RandLAPACK::comps::orth::Stabilization<T>& orth_obj,
                         bool verb,
                         bool orth,
-                        int decision
-		) : RF_Obj(rf_obj), Orth_Obj(orth_obj)
+                        int decision,
+                        hamr::buffer_allocator default_allocator = hamr::buffer_allocator::cpp
+		) : RF_Obj(rf_obj), Orth_Obj(orth_obj), Q_gram(default_allocator, 0, (T)(0)), Q_i_gram(default_allocator, 0, (T)(0)), 
+                    QtQi(default_allocator, 0, (T)(0)),  Q_i(default_allocator, 0, (T)(0)),  B_i(default_allocator, 0, (T)(0)) 
                 {
                         verbosity = verb;
                         orth_check = orth;
@@ -85,23 +88,23 @@ class QB : public QBalg<T>
 		void QB2(
                         int64_t m,
                         int64_t n,
-                        std::vector<T>& A,
+                        hamr::buffer<T>& A,
                         int64_t& k,
                         int64_t block_sz,
                         T tol,
-                        std::vector<T>& Q,
-                        std::vector<T>& B
+                        hamr::buffer<T>& Q,
+                        hamr::buffer<T>& B
                 );
 
                 virtual void call(
                         int64_t m,
                         int64_t n,
-                        std::vector<T>& A,
+                        hamr::buffer<T>& A,
                         int64_t& k,
                         int64_t block_sz,
                         T tol,
-                        std::vector<T>& Q,
-                        std::vector<T>& B
+                        hamr::buffer<T>& Q,
+                        hamr::buffer<T>& B
                 )
                 {
                         switch(this->decision_QB)

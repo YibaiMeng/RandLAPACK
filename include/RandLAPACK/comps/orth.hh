@@ -2,6 +2,7 @@
 #include <blas.hh>
 #define BLAS_HH
 #endif
+#include <hamr_buffer.h>
 
 namespace RandLAPACK::comps::orth {
 
@@ -15,7 +16,7 @@ class Stabilization
                 virtual int call(
                         int64_t m,
                         int64_t k,
-                        std::vector<T>& Q
+                        hamr::buffer<T>& Q
                 ) = 0;
 };
 
@@ -23,13 +24,9 @@ template <typename T>
 class Orth : public Stabilization<T> // TODO #1
 {
 	public:
-                std::vector<T> tvec;
-                std::vector<T> tau;
                 bool chol_fail;
                 int decision_orth;
 
-                // CholQR-specific
-                std::vector<T> Q_gram;
 
                 // Constructor
                 Orth(int decision = 0) : decision_orth(decision) {chol_fail = false;};
@@ -37,28 +34,26 @@ class Orth : public Stabilization<T> // TODO #1
                 int CholQR(
                         int64_t m,
                         int64_t k,
-                        std::vector<T>& Q
+                        hamr::buffer<T>& Q
                 );
 
                 int HQR(
                         int64_t m,
                         int64_t n,
-                        std::vector<T>& A,
-                        std::vector<T>& tau
+                        hamr::buffer<T>& A
                 );
 
                 int GEQR(
                         int64_t m,
                         int64_t n,
-                        std::vector<T>& A,
-                        std::vector<T>& tvec
+                        hamr::buffer<T>& A
                 );
 
                 // Control of Orth types calls.
                 int call(
                         int64_t m,
                         int64_t k,
-                        std::vector<T>& Q
+                        hamr::buffer<T>& Q
                 ){
                         // Default
                         int termination = 0;
@@ -67,22 +62,22 @@ class Orth : public Stabilization<T> // TODO #1
                                 case 0:
                                         if(this->chol_fail)
                                         {
-                                                termination = HQR(m, k, Q, this->tau);
+                                                termination = HQR(m, k, Q);
                                         }
                                         else{
                                                 //Call it twice for better orthogonality
                                                 if(CholQR(m, k, Q))
                                                 {
-                                                        termination = HQR(m, k, Q, this->tau);
+                                                        termination = HQR(m, k, Q);
                                                 }
                                                 termination = CholQR(m, k, Q);
                                         }
                                         break;
                                 case 1:
-                                        termination = HQR(m, k, Q, this->tau);
+                                        termination = HQR(m, k, Q);
                                         break;
                                 case 2: 
-                                        termination = GEQR(m, k, Q, this->tvec);
+                                        termination = GEQR(m, k, Q);
                         }
                         return termination;
                 }
@@ -92,7 +87,6 @@ template <typename T>
 class Stab : public Orth<T>
 {
 	public:
-                std::vector<int64_t> ipiv;
                 int decision_stab;
                 
                 // Constructor
@@ -101,15 +95,14 @@ class Stab : public Orth<T>
                 int PLU(
                         int64_t m,
                         int64_t k,
-                        std::vector<T>& Q,
-                        std::vector<int64_t>& ipiv
+                        hamr::buffer<T>& Q
                 );
 
                 // Control of Stab types calls.
                 virtual int call(
                         int64_t m,
                         int64_t k,
-                        std::vector<T>& Q
+                        hamr::buffer<T>& Q
                 ){
                         int termination = 0;
                         switch(this->decision_stab)
@@ -117,19 +110,19 @@ class Stab : public Orth<T>
                                 case 0:
                                         if(this->chol_fail)
                                         {
-                                                termination = PLU(m, k, Q, this->ipiv);
+                                                termination = PLU(m, k, Q);
                                         }
                                         else{
                                                 // Only call once
                                                 termination = this->CholQR(m, k, Q);
                                                 if(termination)
                                                 {
-                                                        termination = PLU(m, k, Q, this->ipiv);
+                                                        termination = PLU(m, k, Q);
                                                 }
                                         }
                                         break;
                                 case 1:
-                                        termination = PLU(m, k, Q, this->ipiv);
+                                        termination = PLU(m, k, Q);
                                         break;
                         }
                         return termination;

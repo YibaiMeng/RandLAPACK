@@ -3,6 +3,7 @@
 #include <lapack.hh>
 #include <RandBLAS.hh>
 #include <RandLAPACK.hh>
+#include <hamr_buffer.h>
 
 #include <fstream>
 
@@ -24,14 +25,15 @@ class TestQB : public ::testing::Test
     virtual void TearDown() {};
 
     template <typename T>
-    static void test_QB2_general(int64_t m, int64_t n, int64_t k, int64_t p, int64_t block_sz, T tol, std::tuple<int, T, bool> mat_type, uint32_t seed) {
+    static void test_QB2_general(int64_t m, int64_t n, int64_t k, int64_t p, int64_t block_sz, T tol, std::tuple<int, T, bool> mat_type, uint32_t seed, 
+    hamr::buffer_allocator alloc = hamr::buffer_allocator::cpp) {
         
         printf("|==================================TEST QB2 GENERAL BEGIN==================================|\n");
         using namespace blas;
         using namespace lapack;
         
         // For running QB
-        std::vector<T> A(m * n, 0.0);
+        hamr::buffer<T> A(alloc, m * n, 0.0);
         gen_mat_type<T>(m, n, A, k, seed, mat_type);
 
         int64_t size = m * n;
@@ -41,21 +43,21 @@ class TestQB : public ::testing::Test
             k = std::min(m, n);
         }
 
-        std::vector<T> Q(3, 0);
-        std::vector<T> B;
-        std::vector<T> B_cpy(k * n, 0.0);
+        hamr::buffer<T> Q(alloc, 3, (T)0);
+        hamr::buffer<T> B(alloc, 0);
+        hamr::buffer<T> B_cpy(alloc, k * n, (T)0.0);
 
         // For results comparison
-        std::vector<T> A_hat(size, 0.0);
-        std::vector<T> A_k(size, 0.0);
-        std::vector<T> A_cpy (m * n, 0.0);
-        std::vector<T> A_cpy_2 (m * n, 0.0);
+        hamr::buffer<T> A_hat(alloc, size, (T)0.0);
+        hamr::buffer<T> A_k(alloc, size, (T)0.0);
+        hamr::buffer<T> A_cpy (alloc, m * n, (T)0.0);
+        hamr::buffer<T> A_cpy_2 (alloc, m * n, (T)0.0);
 
         // For low-rank SVD
-        std::vector<T> s(n, 0.0);
-        std::vector<T> S(n * n, 0.0);
-        std::vector<T> U(m * n, 0.0);
-        std::vector<T> VT(n * n, 0.0);
+        hamr::buffer<T> s(alloc, n, (T)0.0);
+        hamr::buffer<T> S(alloc, n * n, (T)0.0);
+        hamr::buffer<T> U(alloc,m * n, (T)0.0);
+        hamr::buffer<T> VT(alloc, n * n, (T)0.0);
 
         T* A_dat = A.data();
         T* Q_dat = Q.data();
@@ -71,7 +73,7 @@ class TestQB : public ::testing::Test
         T* s_dat = s.data();
         T* S_dat = S.data();
         T* VT_dat = VT.data();
-        
+
         //char name1[] = "A";
         //RandBLAS::util::print_colmaj(m, n, A.data(), name1);
 
@@ -95,7 +97,7 @@ class TestQB : public ::testing::Test
         // Orthogonalization Constructor - Choose CholQR
         Orth<T> Orth_RF(0);
 
-        // RangeFinder constructor - Choose default (rf1)
+      // RangeFinder constructor - Choose default (rf1)
         RF<T> RF(RS, Orth_RF, verbosity, cond_check, 0);
 
         // Orthogonalization Constructor - Choose CholQR
@@ -150,7 +152,7 @@ class TestQB : public ::testing::Test
 
         printf("Inner dimension of QB: %-25ld\n", k);
         
-        std::vector<T> Ident(k * k, 0.0);
+        hamr::buffer<T> Ident(alloc, k * k, 0.0);
         T* Ident_dat = Ident.data();
         // Generate a reference identity
         eye<T>(k, k, Ident); 
@@ -178,7 +180,7 @@ class TestQB : public ::testing::Test
         // Get low-rank SVD
         gesdd(Job::SomeVec, m, n, A_cpy_dat, m, s_dat, U_dat, m, VT_dat, n);
         // buffer zero vector
-        std::vector<T> z_buf(n, 0.0);
+        hamr::buffer<T> z_buf(alloc, n, 0.0);
         T* z_buf_dat = z_buf.data();
         // zero out the trailing singular values
         copy(n - k, z_buf_dat, 1, s_dat + k, 1);
@@ -226,7 +228,8 @@ class TestQB : public ::testing::Test
 
 //Varying tol, k = min(m, n)
 template <typename T>
-    static void test_QB2_k_eq_min(int64_t m, int64_t n, int64_t k, int64_t p, int64_t block_sz, T tol, std::tuple<int, T, bool> mat_type, uint32_t seed) {
+    static void test_QB2_k_eq_min(int64_t m, int64_t n, int64_t k, int64_t p, int64_t block_sz, T tol, std::tuple<int, T, bool> mat_type, uint32_t seed,
+    hamr::buffer_allocator alloc = hamr::buffer_allocator::cpp) {
         
         printf("|===============================TEST QB2 K = min(M, N) BEGIN===============================|\n");
 
@@ -234,16 +237,16 @@ template <typename T>
         using namespace lapack;
         
         // For running QB
-        std::vector<T> A(m * n, 0.0);
+        hamr::buffer<T> A(alloc, m * n, 0.0);
         gen_mat_type<T>(m, n, A, k, seed, mat_type);
 
         int64_t size = m * n;
         int64_t k_est = std::min(m, n);
 
-        std::vector<T> Q;
-        std::vector<T> B;
+        hamr::buffer<T> Q(alloc, 0, (T)0.0);
+        hamr::buffer<T> B(alloc, 0, (T)0.0);
         // For results comparison
-        std::vector<T> A_hat(size, 0.0);
+        hamr::buffer<T> A_hat(alloc, size, 0.0);
 
         T* A_dat = A.data();
         T* Q_dat = Q.data();

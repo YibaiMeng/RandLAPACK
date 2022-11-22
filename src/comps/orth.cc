@@ -6,6 +6,7 @@ so that it can be of size k*(k+1)/2 instead of k*k.
 #include <lapack.hh>
 #include <RandBLAS.hh>
 #include <RandLAPACK.hh>
+#include <hamr_buffer.h>
 
 using namespace RandLAPACK::comps::util;
 
@@ -16,12 +17,12 @@ template <typename T>
 int Orth<T>::CholQR(
         int64_t m,
         int64_t k,
-        std::vector<T>& Q
+        hamr::buffer<T>& Q
 ){
         using namespace blas;
         using namespace lapack;
-        
-        T* Q_gram_dat = upsize<T>(k * (k + 1) / 2, this->Q_gram);
+        hamr::buffer<T> Q_gram(Q.get_allocator(), k * (k + 1) / 2);
+        T* Q_gram_dat = Q_gram.data();
         T* Q_dat = Q.data();
 
         // Find normal equation Q'Q - Just the upper triangular portion        
@@ -43,15 +44,13 @@ template <typename T>
 int Stab<T>::PLU(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
-        std::vector<int64_t>& ipiv
+        hamr::buffer<T>& A
 ){
         using namespace lapack;
 
         // Not using utility bc vector of int
-        if(ipiv.size() < n) 
-                ipiv.resize(n);
-
+        hamr::buffer<int64_t> ipiv(A.get_allocator(), n);
+        
         if(getrf(m, n, A.data(), m, ipiv.data()))
                 return 1; // failure condition
 
@@ -65,15 +64,13 @@ template <typename T>
 int Orth<T>::HQR(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
-        std::vector<T>& tau
+        hamr::buffer<T>& A
 ){
         // Done via regular LAPACK's QR
         // tau The vector tau of length min(m,n). The scalar factors of the elementary reflectors (see Further Details).
         // tau needs to be a vector of all 2's by default
         using namespace lapack;
-
-        upsize<T>(n, tau);
+        hamr::buffer<T> tau(A.get_allocator(), n);
 
         T* A_dat = A.data();
 	T* tau_dat = tau.data();
@@ -89,17 +86,17 @@ template <typename T>
 int Orth<T>::GEQR(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
-        std::vector<T>& tvec
+        hamr::buffer<T>& A
 ){
         using namespace lapack;
 
-        tvec.resize(5);
+        hamr::buffer<T> tvec(A.get_allocator(), 5); // 5 is because 
 
         T* A_dat = A.data();
         
         geqr(m, n, A_dat, m, tvec.data(), -1);
-        int64_t tsize = (int64_t) tvec[0]; 
+        auto ptr = tvec.get_cpu_accessible();
+        int64_t tsize = (int64_t) ptr.get()[0]; 
         tvec.resize(tsize);
         if(geqr(m, n, A_dat, m, tvec.data(), tsize))
                 return 1;
@@ -107,15 +104,15 @@ int Orth<T>::GEQR(
         return 0;
 }
 
-template int Orth<float>::CholQR(int64_t m, int64_t k, std::vector<float>& Q);
-template int Orth<double>::CholQR(int64_t m, int64_t k, std::vector<double>& Q);
+template int Orth<float>::CholQR(int64_t m, int64_t k, hamr::buffer<float>& Q);
+template int Orth<double>::CholQR(int64_t m, int64_t k, hamr::buffer<double>& Q);
 
-template int Stab<float>::PLU(int64_t m, int64_t n, std::vector<float>& A, std::vector<int64_t>& ipiv);
-template int Stab<double>::PLU(int64_t m, int64_t n, std::vector<double>& A, std::vector<int64_t>& ipiv);
+template int Stab<float>::PLU(int64_t m, int64_t n, hamr::buffer<float>& A);
+template int Stab<double>::PLU(int64_t m, int64_t n, hamr::buffer<double>& A);
 
-template int Orth<float>::HQR(int64_t m, int64_t n, std::vector<float>& A, std::vector<float>& tau);
-template int Orth<double>::HQR(int64_t m, int64_t n, std::vector<double>& A, std::vector<double>& tau);
+template int Orth<float>::HQR(int64_t m, int64_t n, hamr::buffer<float>& A);
+template int Orth<double>::HQR(int64_t m, int64_t n, hamr::buffer<double>& A);
 
-template int Orth<float>::GEQR(int64_t m, int64_t n, std::vector<float>& A, std::vector<float>& tvec);
-template int Orth<double>::GEQR(int64_t m, int64_t n, std::vector<double>& A, std::vector<double>& tvec); 
+template int Orth<float>::GEQR(int64_t m, int64_t n, hamr::buffer<float>& A);
+template int Orth<double>::GEQR(int64_t m, int64_t n, hamr::buffer<double>& A); 
 } // end namespace orth

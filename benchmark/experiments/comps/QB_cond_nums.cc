@@ -8,6 +8,7 @@ TODO #1: Create files if those do not exist.
 #include <lapack.hh>
 #include <RandBLAS.hh>
 #include <RandLAPACK.hh>
+#include <hamr_buffer.h>
 
 #include <fstream>
 
@@ -29,16 +30,16 @@ class BenchmarkQB : public ::testing::Test
     virtual void TearDown() {};
 
 // Define a new return type
-typedef std::pair<std::vector<double>, std::vector<double>>  vector_pair;
+typedef std::pair<hamr::buffer<double>, hamr::buffer<double>>  vector_pair;
 
     template <typename T>
-    static vector_pair test_QB2_plot_helper_run(int64_t m, int64_t n, int64_t k, int64_t p, int64_t block_sz, T tol, std::tuple<int, T, bool> mat_type, uint32_t seed) {
+    static vector_pair test_QB2_plot_helper_run(int64_t m, int64_t n, int64_t k, int64_t p, int64_t block_sz, T tol, std::tuple<int, T, bool> mat_type, uint32_t seed, hamr::buffer_allocator alloc) {
 
         using namespace blas;
         using namespace lapack;
         
         // For running QB
-        std::vector<T> A(m * n, 0.0);
+        hamr::buffer<T> A(alloc, m * n, 0.0);
         gen_mat_type<T>(m, n, A, k, seed, mat_type);
 
         int64_t size = m * n;
@@ -50,10 +51,10 @@ typedef std::pair<std::vector<double>, std::vector<double>>  vector_pair;
 
         int64_t k_est = std::min(m, n);
 
-        std::vector<T> Q(m * k_est, 0.0);
-        std::vector<T> B(k_est * n, 0.0);
+        hamr::buffer<T> Q(alloc, m * k_est, 0.0);
+        hamr::buffer<T> B(alloc, k_est * n, 0.0);
         // For results comparison
-        std::vector<T> A_hat(size, 0.0);
+        hamr::buffer<T> A_hat(alloc, size, 0.0);
 
         T* A_dat = A.data();
         T* Q_dat = Q.data();
@@ -127,7 +128,7 @@ typedef std::pair<std::vector<double>, std::vector<double>>  vector_pair;
     }
 
     template <typename T>
-    static void test_QB2_plot(int64_t k, int64_t max_k, int64_t block_sz, int64_t max_b_sz, int64_t p, int64_t max_p, int mat_type, T decay, bool diagon)
+    static void test_QB2_plot(int64_t k, int64_t max_k, int64_t block_sz, int64_t max_b_sz, int64_t p, int64_t max_p, int mat_type, T decay, bool diagon, hamr::buffer_allocator alloc)
     {
         printf("|==================================TEST QB2 K PLOT BEGIN==================================|\n");
         using namespace blas; 
@@ -147,7 +148,7 @@ typedef std::pair<std::vector<double>, std::vector<double>>  vector_pair;
             {
                 // Making RF's ALL_VEC
                 int64_t v_RF_sz = k / block_sz;  
-                std::vector<T> all_vecs_RF(v_RF_sz * (runs + 1));
+                hamr::buffer<T> all_vecs_RF(alloc, v_RF_sz * (runs + 1));
                 T* all_vecs_RF_dat = all_vecs_RF.data();
 
                 // fill the 1st coumn with iteration indexes
@@ -166,7 +167,7 @@ typedef std::pair<std::vector<double>, std::vector<double>>  vector_pair;
                 {
                     // Making RS's ALL_VEC
                     int64_t v_RS_sz = p * k / block_sz;  
-                    std::vector<T> all_vecs_RS(v_RS_sz * (runs + 1));
+                    hamr::buffer<T> all_vecs_RS(alloc, v_RS_sz * (runs + 1));
                     T* all_vecs_RS_dat = all_vecs_RS.data();
 
                     // fill the 1st coumn with iteration indexes

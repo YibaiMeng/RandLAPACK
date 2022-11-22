@@ -10,6 +10,7 @@ TODO #1: Test get_L.
 
 #include <lapack.hh>
 #include <RandBLAS.hh>
+#include <hamr_buffer.h>
 
 /*
 UTILITY ROUTINES
@@ -25,7 +26,7 @@ template <typename T>
 void eye(
         int64_t m,
         int64_t n,
-        std::vector<T>& A 
+        hamr::buffer<T>& A 
 ){
         T* A_dat = A.data();
         int64_t min = std::min(m, n);
@@ -40,9 +41,9 @@ template <typename T>
 void diag(
         int64_t m,
         int64_t n,
-        const std::vector<T>& s, 
+        const hamr::buffer<T>& s, 
         int64_t k, // size of s, < min(m, n)
-        std::vector<T>& S // Assuming S is m by n
+        hamr::buffer<T>& S // Assuming S is m by n
 ) {     
         using namespace blas;
         // size of s
@@ -54,7 +55,7 @@ void disp_diag(
         int64_t m,
         int64_t n,
         int64_t k, 
-        std::vector<T>& A 
+        hamr::buffer<T>& A 
 ) {     
         T* A_dat = A.data();
         if (k == 0)
@@ -75,7 +76,7 @@ template <typename T>
 void get_L(
         int64_t m,
         int64_t n,
-        std::vector<T>& L
+        hamr::buffer<T>& L
 ) {
 	// Vector end pointer
 	int size = m * n;
@@ -85,13 +86,10 @@ void get_L(
     
         for(int i = m, j = 1; i < size && j < m; i += m, ++j) 
         {             
-                std::for_each(&L_dat[i], &L_dat[i + j],
-                        // Lambda expression begins
-                        [](T& entry)
-                        {
-                                entry = 0.0;
-                        }
-                ); 
+                // TODO: special kernel for GPU
+                for(int idx = i; idx < i + j; idx++) {
+                    L_dat[i] = 0;
+                }
                 // The unit diagonal elements of L were not stored.
                 L_dat[i + j] = 1;
         }
@@ -102,14 +100,14 @@ template <typename T>
 void swap_rows(
         int64_t m,
         int64_t n,
-        std::vector<T>& A, // pointer to the beginning
-        const std::vector<int64_t>& p // Pivot vector
+        hamr::buffer<T>& A, // pointer to the beginning
+        const hamr::buffer<int64_t>& p // Pivot vector
 ) {     
         using namespace blas;
         const int64_t* p_dat = p.data();
         T* A_dat = A.data();
 
-        std::vector<T> row_buf(n, 0.0);
+        hamr::buffer<T> row_buf(A.get_allocator(), n, 0.0);
 
         for (int i = 0, j = 0; i < n; ++i)
         {
@@ -122,7 +120,7 @@ void swap_rows(
 template <typename T> 
 T* upsize(
         int64_t target_sz,
-        std::vector<T>& A
+        hamr::buffer<T>& A
 ) {     
         if (A.size() < target_sz)
                 A.resize(target_sz, 0);
@@ -136,7 +134,7 @@ template <typename T>
 T* row_resize(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k
 ) {     
         using namespace blas;
@@ -177,7 +175,7 @@ template <typename T>
 void gen_mat_type(
         int64_t& m, // These may change
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k, 
         int32_t seed,
         std::tuple<int, T, bool> type
@@ -223,7 +221,7 @@ void gen_mat_type(
                 {
                         // Random diagonal A of rank k
                         printf("TEST MATRIX: RANDOM DIAGONAL\n");
-                        std::vector<T> buf(k, 0.0);
+                        hamr::buffer<T> buf(hamr::buffer_allocator::cpp, k, 0.0);
                         RandBLAS::dense_op::gen_rmat_norm<T>(k, 1, buf.data(), seed);
                         // Fills the first k diagonal elements
                         diag<T>(m, n, buf, k, A);
@@ -234,15 +232,11 @@ void gen_mat_type(
                         // A = diag(sigma), where sigma_1 = ... = sigma_l > sigma_{l + 1} = ... = sigma_n
                         // In the case below, sigma = 1 | 0.5
                         printf("TEST MATRIX: A = diag(sigma), where sigma_1 = ... = sigma_l > sigma_{l + 1} = ... = sigma_n\n");
-                        std::vector<T> buf(n, 1.0);
+                        hamr::buffer<T> buf(hamr::buffer_allocator::cpp, n, 1.0);
                         T* buf_dat = buf.data();
-                        std::for_each(buf.begin() + (n / 2), buf.end(),
-                                // Lambda expression begins
-                                [](T& entry)
-                                {
-                                        entry -= 0.5;
-                                }
-                        );
+                        for(int idx = n / 2; idx < buf.size(); idx++) {
+                            buf_dat[idx] -= 0.5;
+                        }
                         diag<T>(m, n, buf, n, A);
                 }
                 break;
@@ -254,7 +248,7 @@ template <typename T>
 void gen_poly_mat(
         int64_t& m,
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
         T t, // controls the decay. The higher the value, the slower the decay
         bool diagon,
@@ -263,19 +257,16 @@ void gen_poly_mat(
         using namespace lapack;
 
         // Predeclare to all nonzero constants, start decay where needed 
-        std::vector<T> s(k, 1.0);
-        std::vector<T> S(k * k, 0.0);
+        hamr::buffer<T> s(hamr::buffer_allocator::cpp, k, 1.0);
+        hamr::buffer<T> S(hamr::buffer_allocator::cpp, k * k, 0.0);
         
         T cnt = 0.0;
-        // apply lambda function to every entry of s       
-        std::for_each(s.begin() + k * 0.2, s.end(),
-                // Lambda expression begins
-                [&t, &cnt](T& entry)
-                {
-                        entry = 1 / std::pow(++cnt, t);
-                }
-        );
-        
+        // apply lambda function to every entry of s  
+        // TODO: special for GPU.
+        for(int idx = k * 0.2; idx < s.size(); idx++) {
+                (s.data())[idx] = 1 / std::pow(++cnt, t);
+        }     
+
         // form a diagonal S
         diag<T>(k, k, s, k, S);
 
@@ -295,11 +286,23 @@ void gen_poly_mat(
         }
 }
 
+
+template<typename T>
+__global__ void gen_exp_mat_kernel(T* arr, size_t sz, T t) {
+    size_t idx = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if (idx >= sz) return;
+    T cnt = (T)idx + 1;
+    arr[idx] = std::exp(cnt * -t);
+}
+
+
+
 template <typename T> 
 void gen_exp_mat(
         int64_t& m,
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
         T t, // controls the decay. The higher the value, the slower the decay
         bool diagon,
@@ -307,18 +310,26 @@ void gen_exp_mat(
 ) {   
         using namespace lapack;
 
-        std::vector<T> s(k, 0.0);
-        std::vector<T> S(k * k, 0.0);
+        hamr::buffer<T> s(A.get_allocator(), k, 0.0);
+        hamr::buffer<T> S(A.get_allocator(), k * k, 0.0);
         
         T cnt = 0.0;
         // apply lambda function to every entry of s
-        std::for_each(s.begin(), s.end(),
-                // Lambda expression begins
-                [&t, &cnt](T& entry)
-                {
-                        entry = (std::exp(++cnt * -t));
-                }
-        );
+        // TODO: special kernel for GPU.
+        if(A.cuda_accessible()) {
+            dim3 thread_grid(128);
+            size_t n_vals = s.size();
+            dim3 block_grid(n_vals/128 + (n_vals % 128 ? 1 : 0));
+            gen_exp_mat_kernel<<<block_grid, thread_grid>>>(s.data(), s.size(), t);
+            s.synchronize();
+        } else if(A.cpu_accessible()) {
+            for(int idx = 0; idx < s.size(); idx++) {
+                (s.data())[idx] = (std::exp(++cnt * -t));
+            }
+        } else {
+           std::cerr << "Unimplemented" << std::endl;
+           return;
+        }
         
         // form a diagonal S
         diag<T>(k, k, s, k, S);
@@ -342,25 +353,21 @@ template <typename T>
 void gen_s_mat(
         int64_t& m,
         int64_t& n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
         bool diagon,
         int32_t seed
 ) {   
         using namespace lapack;
 
-        std::vector<T> s(k, 0.0);
-        std::vector<T> S(k * k, 0.0);
+        hamr::buffer<T> s(hamr::buffer_allocator::cpp, k, 0.0);
+        hamr::buffer<T> S(hamr::buffer_allocator::cpp, k * k, 0.0);
 
         T cnt = 0.0;
         // apply lambda function to every entry of s
-        std::for_each(s.begin(), s.end(),
-                // Lambda expression begins
-                [&cnt](T& entry)
-                {
-                        entry = 0.0001 + (1 / (1 + std::exp(++cnt - 30)));
-                }
-        );
+        for(int idx = 0; idx < s.size(); idx++) {
+            s.data()[idx] = 0.0001 + (1 / (1 + std::exp(++cnt - 30)));
+        }
 
         // form a diagonal S
         diag<T>(k, k, s, k, S);
@@ -384,18 +391,18 @@ template <typename T>
 void gen_mat(
         int64_t m,
         int64_t n,
-        std::vector<T>& A,
+        hamr::buffer<T>& A,
         int64_t k,
-        std::vector<T>& S,
+        hamr::buffer<T>& S,
         int32_t seed
 ) {   
         using namespace blas;
         using namespace lapack;
         
-        std::vector<T> U(m * k, 0.0);
-        std::vector<T> V(n * k, 0.0);
-        std::vector<T> tau(k, 2.0);
-        std::vector<T> Gemm_buf(m * k, 0.0);
+        hamr::buffer<T> U(hamr::buffer_allocator::cpp, m * k, 0.0);
+        hamr::buffer<T> V(hamr::buffer_allocator::cpp, n * k, 0.0);
+        hamr::buffer<T> tau(hamr::buffer_allocator::cpp, k, 2.0);
+        hamr::buffer<T> Gemm_buf(hamr::buffer_allocator::cpp, m * k, 0.0);
 
         // Data pointer predeclarations for whatever is accessed more than once
         T* U_dat = U.data();
@@ -415,7 +422,7 @@ void gen_mat(
         copy(m * k, U_dat, 1, Gemm_buf_dat, 1);
         for(int i = 0; i < k; ++i)
         {
-                scal(m, S[i + k * i], &Gemm_buf_dat[i * m], 1);
+                scal(m, (S.data())[i + k * i], &Gemm_buf_dat[i * m], 1);
         }
         
         gemm<T>(Layout::ColMajor, Op::NoTrans, Op::Trans, m, n, k, 1.0, Gemm_buf_dat, m, V_dat, n, 0.0, A.data(), m);
@@ -425,19 +432,19 @@ template <typename T>
 void cond_num_check(
         int64_t m,
         int64_t n,
-        const std::vector<T>& A,
-        std::vector<T>& A_cpy,
-        std::vector<T>& s,
+        const hamr::buffer<T>& A,
         std::vector<T>& cond_nums,
         bool verbosity
 ) {   
         using namespace lapack;
-        
         // Copy to avoid any changes
-        T* A_cpy_dat = upsize(m * n, A_cpy);
-        T* s_dat = upsize(n, s);
+        hamr::buffer<T> A_cpy(A.get_allocator(), m * n, 0.0); 
+        hamr::buffer<T> s(A.get_allocator(), n, 0.0); 
+        T* A_cpy_dat = A_cpy.data();
+        T* s_dat = s.data();
 
         lacpy(MatrixType::General, m, n, A.data(), m, A_cpy_dat, m);
+        std::cout << m << " " << n << std::endl;
         gesdd(Job::NoVec, m, n, A_cpy_dat, m, s_dat, NULL, m, NULL, n);
         T cond_num = s_dat[0] / s_dat[n - 1];
 
@@ -453,8 +460,8 @@ bool orthogonality_check(
         int64_t m,
         int64_t n,
         int64_t k,
-        const std::vector<T>& A,
-        std::vector<T>& A_gram,
+        const hamr::buffer<T>& A,
+        hamr::buffer<T>& A_gram,
         bool verbosity
 ) {
         using namespace lapack;
@@ -480,45 +487,45 @@ bool orthogonality_check(
         return false;
 }
 
-template void eye<float>(int64_t m, int64_t n, std::vector<float>& A );
-template void eye<double>(int64_t m, int64_t n, std::vector<double>& A );
+template void eye<float>(int64_t m, int64_t n, hamr::buffer<float>& A );
+template void eye<double>(int64_t m, int64_t n, hamr::buffer<double>& A );
 
-template void get_L<float>(int64_t m, int64_t n, std::vector<float>& L);
-template void get_L<double>(int64_t m, int64_t n, std::vector<double>& L);
+template void get_L<float>(int64_t m, int64_t n, hamr::buffer<float>& L);
+template void get_L<double>(int64_t m, int64_t n, hamr::buffer<double>& L);
 
-template void diag(int64_t m, int64_t n, const std::vector<float>& s, int64_t k, std::vector<float>& S);
-template void diag(int64_t m, int64_t n, const std::vector<double>& s, int64_t k, std::vector<double>& S);
+template void diag(int64_t m, int64_t n, const hamr::buffer<float>& s, int64_t k, hamr::buffer<float>& S);
+template void diag(int64_t m, int64_t n, const hamr::buffer<double>& s, int64_t k, hamr::buffer<double>& S);
 
-template void disp_diag(int64_t m, int64_t n, int64_t k, std::vector<float>& A);
-template void disp_diag(int64_t m, int64_t n, int64_t k, std::vector<double>& A);
+template void disp_diag(int64_t m, int64_t n, int64_t k, hamr::buffer<float>& A);
+template void disp_diag(int64_t m, int64_t n, int64_t k, hamr::buffer<double>& A);
 
-template void swap_rows(int64_t m, int64_t n, std::vector<float>& A, const std::vector<int64_t>& p);
-template void swap_rows(int64_t m, int64_t n, std::vector<double>& A, const std::vector<int64_t>& p);
+template void swap_rows(int64_t m, int64_t n, hamr::buffer<float>& A,  const hamr::buffer<int64_t>& p);
+template void swap_rows(int64_t m, int64_t n, hamr::buffer<double>& A, const hamr::buffer<int64_t>& p);
 
-template float* upsize(int64_t target_sz, std::vector<float>& A);
-template double* upsize(int64_t target_sz, std::vector<double>& A);
+template float* upsize(int64_t target_sz, hamr::buffer<float>& A);
+template double* upsize(int64_t target_sz, hamr::buffer<double>& A);
 
-template float* row_resize(int64_t m, int64_t n, std::vector<float>& A, int64_t k);
-template double* row_resize(int64_t m, int64_t n, std::vector<double>& A, int64_t k);
+template float* row_resize(int64_t m, int64_t n, hamr::buffer<float>& A, int64_t k);
+template double* row_resize(int64_t m, int64_t n, hamr::buffer<double>& A, int64_t k);
 
-template void gen_mat_type(int64_t& m, int64_t& n, std::vector<float>& A, int64_t k, int32_t seed, std::tuple<int, float, bool> type);
-template void gen_mat_type(int64_t& m, int64_t& n, std::vector<double>& A, int64_t k, int32_t seed, std::tuple<int, double, bool> type);
+template void gen_mat_type(int64_t& m, int64_t& n, hamr::buffer<float>& A, int64_t k, int32_t seed, std::tuple<int, float, bool> type);
+template void gen_mat_type(int64_t& m, int64_t& n, hamr::buffer<double>& A, int64_t k, int32_t seed, std::tuple<int, double, bool> type);
 
-template void gen_poly_mat(int64_t& m, int64_t& n, std::vector<float>& A, int64_t k, float t, bool diagon, int32_t seed); 
-template void gen_poly_mat(int64_t& m, int64_t& n, std::vector<double>& A, int64_t k, double t, bool diagon, int32_t seed);
+template void gen_poly_mat(int64_t& m, int64_t& n, hamr::buffer<float>& A, int64_t k, float t, bool diagon, int32_t seed); 
+template void gen_poly_mat(int64_t& m, int64_t& n, hamr::buffer<double>& A, int64_t k, double t, bool diagon, int32_t seed);
 
-template void gen_exp_mat(int64_t& m, int64_t& n, std::vector<float>& A, int64_t k, float t, bool diagon, int32_t seed); 
-template void gen_exp_mat(int64_t& m, int64_t& n, std::vector<double>& A, int64_t k, double t, bool diagon, int32_t seed);
+template void gen_exp_mat(int64_t& m, int64_t& n, hamr::buffer<float>& A, int64_t k, float t, bool diagon, int32_t seed); 
+template void gen_exp_mat(int64_t& m, int64_t& n, hamr::buffer<double>& A, int64_t k, double t, bool diagon, int32_t seed);
 
-template void gen_s_mat(int64_t& m, int64_t& n, std::vector<float>& A, int64_t k, bool diagon, int32_t seed);
-template void gen_s_mat(int64_t& m, int64_t& n, std::vector<double>& A, int64_t k, bool diagon, int32_t seed);
+template void gen_s_mat(int64_t& m, int64_t& n, hamr::buffer<float>& A, int64_t k, bool diagon, int32_t seed);
+template void gen_s_mat(int64_t& m, int64_t& n, hamr::buffer<double>& A, int64_t k, bool diagon, int32_t seed);
 
-template void gen_mat(int64_t m, int64_t n, std::vector<float>& A, int64_t k, std::vector<float>& S, int32_t seed); 
-template void gen_mat(int64_t m, int64_t n, std::vector<double>& A, int64_t k, std::vector<double>& S, int32_t seed);
+template void gen_mat(int64_t m, int64_t n, hamr::buffer<float>& A, int64_t k, hamr::buffer<float>& S, int32_t seed); 
+template void gen_mat(int64_t m, int64_t n, hamr::buffer<double>& A, int64_t k, hamr::buffer<double>& S, int32_t seed);
 
-template void cond_num_check(int64_t m, int64_t n, const std::vector<float>& A, std::vector<float>& A_cpy, std::vector<float>& s, std::vector<float>& cond_nums, bool verbosity);
-template void cond_num_check(int64_t m, int64_t n, const std::vector<double>& A, std::vector<double>& A_cpy, std::vector<double>& s, std::vector<double>& cond_nums, bool verbosity);
+template void cond_num_check(int64_t m, int64_t n, const hamr::buffer<float>& A, std::vector<float>& cond_nums, bool verbosity);
+template void cond_num_check(int64_t m, int64_t n, const hamr::buffer<double>& A, std::vector<double>& cond_nums, bool verbosity);
 
-template bool orthogonality_check(int64_t m, int64_t n, int64_t k, const std::vector<float>& A, std::vector<float>& A_gram, bool verbosity);
-template bool orthogonality_check(int64_t m, int64_t n, int64_t k, const std::vector<double>& A, std::vector<double>& A_gram, bool verbosity);
+template bool orthogonality_check(int64_t m, int64_t n, int64_t k, const hamr::buffer<float>& A, hamr::buffer<float>& A_gram, bool verbosity);
+template bool orthogonality_check(int64_t m, int64_t n, int64_t k, const hamr::buffer<double>& A, hamr::buffer<double>& A_gram, bool verbosity);
 } // end namespace util

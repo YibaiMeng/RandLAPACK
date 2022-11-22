@@ -9,6 +9,7 @@ On early termination, data in B is moved, but not sized down
 #include <RandBLAS.hh>
 #include <lapack.hh>
 #include <RandLAPACK.hh>
+#include <hamr_buffer.h>
 
 #include <math.h>
 
@@ -20,12 +21,12 @@ template <typename T>
 void QB<T>::QB2(
     int64_t m,
     int64_t n,
-    std::vector<T>& A,
+    hamr::buffer<T>& A,
     int64_t& k,
     int64_t block_sz,
     T tol,
-    std::vector<T>& Q,
-    std::vector<T>& B
+    hamr::buffer<T>& Q,
+    hamr::buffer<T>& B
 ){
     using namespace blas;
     using namespace lapack;
@@ -66,7 +67,7 @@ void QB<T>::QB2(
     }
     
     // Copy the initial data to avoid unwanted modification TODO #1
-    std::vector<T> A_cpy (m * n, 0.0);
+    hamr::buffer<T> A_cpy (A.get_allocator(), m * n, 0.0);
     T* A_cpy_dat = A_cpy.data();
     lacpy(MatrixType::General, m, n, A_dat, m, A_cpy_dat, m);
 
@@ -188,6 +189,6 @@ void QB<T>::QB2(
     this->termination = 3;
 }
 
-template void QB<float>::QB2(int64_t m, int64_t n, std::vector<float>& A, int64_t& k, int64_t block_sz, float tol, std::vector<float>& Q, std::vector<float>& B);
-template void QB<double>::QB2(int64_t m, int64_t n, std::vector<double>& A, int64_t& k, int64_t block_sz, double tol, std::vector<double>& Q, std::vector<double>& B);
+template void QB<float>::QB2(int64_t m, int64_t n, hamr::buffer<float>& A, int64_t& k, int64_t block_sz, float tol, hamr::buffer<float>& Q, hamr::buffer<float>& B);
+template void QB<double>::QB2(int64_t m, int64_t n, hamr::buffer<double>& A, int64_t& k, int64_t block_sz, double tol, hamr::buffer<double>& Q, hamr::buffer<double>& B);
 }// end namespace RandLAPACK::comps::qb

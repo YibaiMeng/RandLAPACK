@@ -1,11 +1,11 @@
 #include <RandLAPACK/comps/determiter.hh>
 #include <iostream>
-
+#include <hamr_buffer.h>
 
 namespace RandLAPACK::comps::determiter {
 
 
-
+// TODO: I don't quite understand if this should interface with others.	
 template <typename T>
 void pcg(
 	int64_t m,
@@ -28,12 +28,12 @@ void pcg(
 	
 	using namespace blas;
 
-	std::vector<T> out_a1(m, 0.0);
-	std::vector<T> out_at1(n, 0.0);
-	std::vector<T> out_m1(n, 0.0);
-	std::vector<T> out_mt1(k, 0.0);
+	hamr::buffer<T> out_a1(hamr::buffer_allocator::cpp, m, 0.0);
+	hamr::buffer<T> out_at1(hamr::buffer_allocator::cpp, n, 0.0);
+	hamr::buffer<T> out_m1(hamr::buffer_allocator::cpp, n, 0.0);
+	hamr::buffer<T> out_mt1(hamr::buffer_allocator::cpp, k, 0.0);
 	
-	std::vector<T> b1(n);
+	hamr::buffer<T> b1(hamr::buffer_allocator::cpp, n);
 	int f = 1;
 	
 	//  b1 = A'b - c
@@ -45,7 +45,7 @@ void pcg(
 	//		out_at1 = A'out_a1
 	//		out_at1 += delta x0
 	//		r -= out_at1
-	std::vector<T> r(n, 0.0);	
+	hamr::buffer<T> r(hamr::buffer_allocator::cpp, n, 0.0);	
 	copy<T>((int)n, b1.data(),(int)1, r.data(), (int)1);
 	gemv<T>(Layout::ColMajor, Op::NoTrans, m, n, 1.0, A, lda, x0, 1, delta, out_a1.data(), 1);
 	gemv<T>(Layout::ColMajor, Op::Trans, m, n, 1.0, A, lda, out_a1.data(), 1, 0.0, out_at1.data(), 1);
@@ -53,7 +53,7 @@ void pcg(
 	axpy<T>(n, -1.0, out_at1.data(), 1, r.data(), 1);
 	
 	// d = M (M' r);
-	std::vector<T> d(n);
+	hamr::buffer<T> d(hamr::buffer_allocator::cpp, n);
 	gemv<T>(Layout::ColMajor, Op::Trans, n, k, 1.0, M, ldm, r.data(), 1, 0.0, out_mt1.data(), 1);
 	gemv<T>(Layout::ColMajor, Op::NoTrans, n, k, 1.0, M, ldm, out_mt1.data(), 1, 0.0, d.data(), 1);
 	
@@ -117,7 +117,7 @@ void pcg(
 		beta = delta1_new / delta1_old;
 		for (int i = 0; i < n; ++i)
 		{
-			d[i] = beta*d[i] + out_m1[i];
+			(d.data())[i] = beta*(d.data())[i] + (out_m1.data())[i];
 		}
 
 		++iter;
@@ -134,25 +134,25 @@ void pcg(
 
 void run_pcgls_ex(int n, int m)
 {
-	std::vector<double> A(m * n);
+	hamr::buffer<double> A(hamr::buffer_allocator::cpp, m * n);
 	for (int i = 0; i < A.size(); ++i)
 	{
-		A[i] = ((double)i + 1.0) / m;
+		(A.data())[i] = ((double)i + 1.0) / m;
 	}
-	std::vector<double> b(m);
+	hamr::buffer<double> b(hamr::buffer_allocator::cpp, m);
 	for (int i = 0; i < b.size(); ++i)
 	{
-		b[i] = 1.0 / ((double) (i+1));
+		(b.data())[i] = 1.0 / ((double) (i+1));
 	}
-	std::vector<double> c(n, 0.0);
-	std::vector<double> M(n * n, 0.0);
+	hamr::buffer<double> c(hamr::buffer_allocator::cpp, n, 0.0);
+	hamr::buffer<double> M(hamr::buffer_allocator::cpp, n * n, 0.0);
 	for (int i = 0; i < n; ++i)
 	{
-		M[i + n*i] = 1.0;
+		(M.data())[i + n*i] = 1.0;
 	}
-	std::vector<double> x0(n, 0.0);
-	std::vector<double> x(n, 0.0);
-	std::vector<double> y(m, 0.0);
+	hamr::buffer<double> x0(hamr::buffer_allocator::cpp, n, 0.0);
+	hamr::buffer<double> x(hamr::buffer_allocator::cpp, n, 0.0);
+	hamr::buffer<double> y(hamr::buffer_allocator::cpp, m, 0.0);
 	std::vector<double> resid_vec(10*n, -1.0);
 
 	double delta = 0.1;
