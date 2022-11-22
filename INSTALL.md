@@ -93,6 +93,15 @@ make -j install
 ctest  # run unit tests (only if GTest was found by CMake)
 ```
 
+One can install Hamr from [source](https://github.com/LBL-EESA/HAMR) by running
+```shell
+git clone https://github.com/LBL-EESA/HAMR
+mkdir HAMR-build && cd HAMR-build
+cmake -DCMAKE_INSTALL_PREFIX=../HAMR-install/ -DHAMR_ENABLE_CUDA=True \
+-DCMAKE_CUDA_COMPILER=/path/to/your/nvcc ../HAMR
+make -j install
+```
+
 ## 3. Building and installing RandLAPACK
 
 RandLAPACK is configured with CMake and built with GNU make.
@@ -108,6 +117,7 @@ cd RandLAPACK-build
 cmake -DCMAKE_BUILD_TYPE=Release \
     -Dlapackpp_DIR=`pwd`/../lapackpp-install/lib/lapackpp/ \
     -DRandBLAS_DIR=`pwd`/../RandBLAS-install/lib/cmake/ \
+    -DHamr_DIR=`pwd`/../HAMR-install/ \
     -DCMAKE_BINARY_DIR=`pwd` \
     -DCMAKE_INSTALL_PREFIX=`pwd`/../RandLAPACK-install \
     ../RandLAPACK/
@@ -243,3 +253,4 @@ If you're having trouble installing RandLAPACK, you can always refer to [that wo
 The workflow includes statements which print the working directory
 and list the contents of that directory at various points in the installation.
 We do that so that it's easier to infer a valid choice of directory structure for building RandLAPACK.
+
