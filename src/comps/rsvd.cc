@@ -73,9 +73,7 @@ namespace RandLAPACK::comps::rsvd
                         gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, k, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), k, *queue);
                         queue->sync();
                 }
-                else
-                        gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, k, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), k);
-
+                        gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, k, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), m);
                 // Truncate
                 // U, S, Vt = U[:, :rank], S[:rank], Vt[:rank, :]
         }
