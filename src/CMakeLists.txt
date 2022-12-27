@@ -6,6 +6,7 @@ set(RandLAPACK_cxx_srcs
     comps/util.cc
     comps/orth.cc
     comps/rsvd.cc
+    loguru.cpp # TODO: how to link this as a regular dependency?
 )
 
 set(RandLAPACK_libs
@@ -25,6 +26,7 @@ target_include_directories(
     $<INSTALL_INTERFACE:include>
     $<INSTALL_INTERFACE:include/RandLAPACK>
     ${Hamr_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/loguru>
 )
 
 target_link_libraries(RandLAPACK PUBLIC ${RandLAPACK_libs} hamr)
