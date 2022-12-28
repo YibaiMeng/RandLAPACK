@@ -65,9 +65,9 @@ protected:
         int64_t n_oversamples = 2;
         int64_t k = n_oversamples + target_rank;
         LOG_F(INFO, "Actual rank of test input is %i. Target rank %i, number of samples %i", rank, target_rank, k);
-        hamr::buffer<T> U(alloc, m * target_rank);
-        hamr::buffer<T> S(alloc, k);
-        hamr::buffer<T> VT(alloc, n * n);
+        hamr::buffer<T> U(alloc, m * target_rank, 0.0);
+        hamr::buffer<T> S(alloc, k, 0.0);
+        hamr::buffer<T> VT(alloc, n * n, 0.0);
         // The cublas implementation has a bug: if you do not init everything to a value,
         // then there might be NaNs, even if beta is 0.0 in GEMM.
         hamr::buffer<T> A(hamr::buffer_allocator::cpp, m * n, 0.0);
