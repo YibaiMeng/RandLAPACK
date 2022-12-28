@@ -75,7 +75,7 @@ protected:
         RandBLAS::dense_op::gen_rmat_norm<T>(m, rank, src_1.data(), seed);
         RandBLAS::dense_op::gen_rmat_norm<T>(rank, n, src_2.data(), seed + 1);
         blas::gemm<T>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, rank, 1.0, src_1.data(), m, src_2.data(), rank, 0, A.data(), m);
-        A.move(alloc);
+        CHECK_F(A.move(alloc) == 0);
         A.synchronize();
         lapack::Queue *q = nullptr;
         if (alloc == hamr::buffer_allocator::cuda)
@@ -83,13 +83,13 @@ protected:
         rsvd_obj.call(m, n, A, target_rank, n_oversamples, n_subspace_iters, U, S, VT, q);
         if (q)
             q->sync();
-        U.move(hamr::buffer_allocator::cpp);
+        CHECK_F(U.move(hamr::buffer_allocator::cpp) == 0);
         U.synchronize();
-        VT.move(hamr::buffer_allocator::cpp);
+        CHECK_F(VT.move(hamr::buffer_allocator::cpp) == 0);
         VT.synchronize();
-        S.move(hamr::buffer_allocator::cpp);
+        CHECK_F(S.move(hamr::buffer_allocator::cpp) == 0);
         S.synchronize();
-        A.move(hamr::buffer_allocator::cpp);
+        CHECK_F(A.move(hamr::buffer_allocator::cpp) == 0);
         A.synchronize();
         LOG_F(INFO, "Calculating exact SVD");
         hamr::buffer<T> U_gold(hamr::buffer_allocator::cpp, m * m, 0.0);

@@ -35,20 +35,20 @@ void RS<T>::rs1(
 	if (p % 2 == 0) 
 	{
 		// RandBLAS does not support CUDA at the moment.
-		Omega.move(hamr::buffer_allocator::cpp);
+		CHECK_F(Omega.move(hamr::buffer_allocator::cpp) == 0);
 		Omega.synchronize();
 		// Fill n by k Omega
 		RandBLAS::dense_op::gen_rmat_norm<T>(n, k, Omega.data(), seed);
-		Omega.move(A.get_allocator());
+		CHECK_F(Omega.move(A.get_allocator()) == 0);
 		Omega.synchronize();
 	}
 	else
 	{	
-		Omega_1.move(hamr::buffer_allocator::cpp);
+		CHECK_F(Omega_1.move(hamr::buffer_allocator::cpp) == 0);
 		Omega_1.synchronize();
 		// Fill m by k Omega_1
 		RandBLAS::dense_op::gen_rmat_norm<T>(m, k, Omega_1.data(), seed);
-		Omega_1.move(A.get_allocator());
+		CHECK_F(Omega_1.move(A.get_allocator()) == 0);
 		Omega_1.synchronize();
 		// multiply A' by Omega results in n by k omega
 		if(queue) gemm(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n, *blas_queue);

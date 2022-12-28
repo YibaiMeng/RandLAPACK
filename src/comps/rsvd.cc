@@ -78,12 +78,12 @@ namespace RandLAPACK::comps::rsvd
                    LOG_F(INFO, "B = Q.T @ A completed on GPU");
                 }
                 auto ptr = B.get_cpu_accessible();
-                S.move(hamr::buffer_allocator::cpp);
+                CHECK_F(S.move(hamr::buffer_allocator::cpp) == 0);
                 S.synchronize();
                 LOG_F(INFO, "Starting U_tilde, S, VT_cpu = gesvd(B)");
                 gesvd(lapack::Job::AllVec, lapack::Job::AllVec, k, n, ptr.get(), k, S.data(), U_tilde.data(), k, VT_cpu.data(), n);
                 LOG_F(INFO, "Finished U_tilde, S, VT_cpu = gesvd(B)");
-                U_tilde.move(A.get_allocator());
+                CHECK_F(U_tilde.move(A.get_allocator()) == 0);
                 // TODO: test out HAMR's sync behavior regarding memory and computation?
                 U_tilde.synchronize();
                 LOG_F(INFO, "U_tilde moved to GPU");

@@ -67,7 +67,7 @@ class Orth : public Stabilization<T> // TODO #1
                             LOG_F(INFO, "Input for orthogonalization not on CPU");
                             CHECK_F(queue != nullptr, "Why is Q not on CPU when there isn't a queue?");
                             queue->sync();
-                            Q.move(hamr::buffer_allocator::cpp);
+                            CHECK_F(Q.move(hamr::buffer_allocator::cpp) == 0, "move unsuccessful");
                             Q.synchronize();
                         }
 
@@ -95,7 +95,7 @@ class Orth : public Stabilization<T> // TODO #1
                                 case 2: 
                                         termination = GEQR(m, k, Q);
                         }
-                        Q.move(prev_alloc);
+                        CHECK_F(Q.move(prev_alloc) == 0, "move unsuccessful");
                         Q.synchronize();
                         return termination;
                 }
@@ -129,7 +129,7 @@ class Stab : public Orth<T>
                             LOG_F(INFO, "Input for stabilization not on CPU");
                             CHECK_F(queue != nullptr, "Why is Q not on CPU when there isn't a queue?");
                             queue->sync();
-                            Q.move(hamr::buffer_allocator::cpp);
+                            CHECK_F(Q.move(hamr::buffer_allocator::cpp) == 0, "Move unsuccessful");
                             Q.synchronize();
                         }
                         int termination = 0;
@@ -153,7 +153,7 @@ class Stab : public Orth<T>
                                         termination = PLU(m, k, Q);
                                         break;
                         }
-                        Q.move(prev_alloc);
+                        CHECK_F(Q.move(prev_alloc) == 0, "Move unsuccessful");
                         Q.synchronize();
                         LOG_F(INFO, "Finishing Stabilization");
                         return termination;
