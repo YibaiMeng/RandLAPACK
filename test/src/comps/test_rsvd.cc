@@ -80,9 +80,13 @@ protected:
         lapack::Queue *q = nullptr;
         if (alloc == hamr::buffer_allocator::cuda)
             q = new lapack::Queue(0, 0);
+        auto start_rsvd = high_resolution_clock::now();
         rsvd_obj.call(m, n, A, target_rank, n_oversamples, n_subspace_iters, U, S, VT, q);
         if (q)
             q->sync();
+        auto stop_rsvd = high_resolution_clock::now();
+        long dur_rsvd = duration_cast<microseconds>(stop_rsvd - start_rsvd).count();
+        LOG_F(INFO, "RSVD completed in %ld us", dur_rsvd);
         CHECK_F(U.move(hamr::buffer_allocator::cpp) == 0);
         U.synchronize();
         CHECK_F(VT.move(hamr::buffer_allocator::cpp) == 0);
@@ -95,9 +99,11 @@ protected:
         hamr::buffer<T> U_gold(hamr::buffer_allocator::cpp, m * m, 0.0);
         hamr::buffer<T> S_gold(hamr::buffer_allocator::cpp, n, 0.0);
         hamr::buffer<T> VT_gold(hamr::buffer_allocator::cpp, n * n, 0.0);
+        auto start_svd = high_resolution_clock::now();
         lapack::gesvd(lapack::Job::AllVec, lapack::Job::AllVec, m, n, A.data(), m, S_gold.data(), U_gold.data(), m, VT_gold.data(), n);
-        LOG_F(INFO, "Exact SVD calculated");
-        LOG_F(INFO, "Reconstructing A from top %i singular values", target_rank);
+        auto stop_svd = high_resolution_clock::now();
+        long dur_svd = duration_cast<microseconds>(stop_svd - start_svd).count();
+        LOG_F(INFO, "SVD completed in %ld us", dur_svd);
         hamr::buffer<T> A_reconstruct_gold(hamr::buffer_allocator::cpp, m * n, 0.0);
         hamr::buffer<T> U_tmp_gold(hamr::buffer_allocator::cpp, m * n, 0.0);
         hamr::buffer<T> S_diag_gold(hamr::buffer_allocator::cpp, target_rank * n, 0.0);
