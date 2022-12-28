@@ -8,6 +8,7 @@ if (GTest_FOUND)
         src/comps/test_util.cc 
         src/comps/test_orth.cc 
         src/comps/test_qb.cc
+        src/comps/test_rsvd.cc
     )
     set_source_files_properties(${RandLAPACK_testx_cxx_srcs} PROPERTIES LANGUAGE CUDA)
     add_executable(RandLAPACK_tests ${RandLAPACK_testx_cxx_srcs})
