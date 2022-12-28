@@ -86,20 +86,20 @@ namespace RandLAPACK::comps::rsvd
                 CHECK_F(U_tilde.move(A.get_allocator()) == 0);
                 // TODO: test out HAMR's sync behavior regarding memory and computation?
                 U_tilde.synchronize();
-                LOG_F(INFO, "U_tilde moved to GPU");
                 // U = Q (m, k) @ U_tilde (k, k)
                 // U (m, k)
                 // However, only the first "rank" columns of U is needed, so U is truncated to (m, rank).
+                // U (m, rank) = Q(m, k) @ U_tilde (k, rank)
                 if (queue)
                 {
                         LOG_F(INFO, "Starting U = Q @ U_tilde on GPU");
-                        gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, rank, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), m, *blas_queue);
+                        gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, rank, k, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), m, *blas_queue);
                         queue->sync();
                         LOG_F(INFO, "Finishing U = Q @ U_tilde on GPU");
                 }
                 else {
                         LOG_F(INFO, "Starting U = Q @ U_tilde on CPU");
-                        gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, rank, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), m);
+                        gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, rank, k, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), m);
                         LOG_F(INFO, "Finishing U = Q @ U_tilde on CPU");
                 }
                 // Copying VT_cpu to VT
