@@ -95,7 +95,7 @@ protected:
         hamr::buffer<T> U_gold(hamr::buffer_allocator::cpp, m * m, 0.0);
         hamr::buffer<T> S_gold(hamr::buffer_allocator::cpp, n, 0.0);
         hamr::buffer<T> VT_gold(hamr::buffer_allocator::cpp, n * n, 0.0);
-        lapack::gesdd(lapack::Job::AllVec, m, n, A.data(), m, S_gold.data(), U_gold.data(), m, VT_gold.data(), n);
+        lapack::gesvd(lapack::Job::AllVec, lapack::Job::AllVec, m, n, A.data(), m, S_gold.data(), U_gold.data(), m, VT_gold.data(), n);
         LOG_F(INFO, "Exact SVD calculated");
         LOG_F(INFO, "Reconstructing A from top %i singular values", target_rank);
         hamr::buffer<T> A_reconstruct_gold(hamr::buffer_allocator::cpp, m * n, 0.0);

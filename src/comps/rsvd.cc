@@ -80,9 +80,9 @@ namespace RandLAPACK::comps::rsvd
                 auto ptr = B.get_cpu_accessible();
                 S.move(hamr::buffer_allocator::cpp);
                 S.synchronize();
-                LOG_F(INFO, "Starting U_tilde, S, VT_cpu = gesdd(B)");
-                gesdd(lapack::Job::AllVec, k, n, ptr.get(), k, S.data(), U_tilde.data(), k, VT_cpu.data(), n);
-                LOG_F(INFO, "Finished U_tilde, S, VT_cpu = gesdd(B)");
+                LOG_F(INFO, "Starting U_tilde, S, VT_cpu = gesvd(B)");
+                gesvd(lapack::Job::AllVec, lapack::Job::AllVec, k, n, ptr.get(), k, S.data(), U_tilde.data(), k, VT_cpu.data(), n);
+                LOG_F(INFO, "Finished U_tilde, S, VT_cpu = gesvd(B)");
                 U_tilde.move(A.get_allocator());
                 // TODO: test out HAMR's sync behavior regarding memory and computation?
                 U_tilde.synchronize();
