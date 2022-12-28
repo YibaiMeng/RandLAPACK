@@ -106,7 +106,7 @@ namespace RandLAPACK::comps::rsvd
                 }
                 // Copying VT_cpu to VT
                 LOG_F(INFO, "Copying VT_cpu to VT");
-                VT = VT_cpu;
+                VT.set(0, VT_cpu, 0, VT_cpu.size());
                 LOG_F(INFO, "Copied VT_cpu to VT");
         }
 
