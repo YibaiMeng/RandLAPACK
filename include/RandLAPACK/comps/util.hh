@@ -6,6 +6,19 @@
 
 namespace RandLAPACK::comps::util {
 
+
+// Behaves like A[:,column_start:column_end] in python.
+// fancy syntax like [1:-1] not supported.
+// Expects A to be column major
+template <typename T>
+void slice_columns(int64_t m, 
+                int64_t n, 
+                hamr::buffer<T>& src, 
+                int64_t column_start, 
+                int64_t column_end,
+                hamr::buffer<T>& dst);
+
+
 template <typename T>
 void eye(
         int64_t m,

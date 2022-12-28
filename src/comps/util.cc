@@ -20,6 +20,22 @@ However, those routines are not necessarily randomized. What do we do with them?
 */
 namespace RandLAPACK::comps::util {
 
+template <typename T>
+void slice_columns(int64_t m, 
+                int64_t n, 
+                hamr::buffer<T>& src, 
+                int64_t column_start, 
+                int64_t column_end,
+                hamr::buffer<T>& dst) {
+  assert(column_start >= 0 && column_start < n);
+  assert(column_end > 0 && column_end <= n);
+  assert(column_end > column_start);
+  assert(src.size() == m * n);
+  assert(dst.size() == (column_end - column_start) * m);
+  assert(src.get_allocator() == dst.get_allocater());
+  dst.set(0, src, column_start * m, (column_end - column_start) * m);
+}
+
 
 // Generate Identity
 // Assuming col-maj
@@ -521,6 +537,9 @@ void print_mat(int m, int n, hamr::buffer<T> &buff, bool python)
     }
     return;
 }
+
+template void slice_columns<float>(int64_t m, int64_t n, hamr::buffer<float>& src, int64_t column_start, int64_t column_end, hamr::buffer<float>& dst);
+template void slice_columns<double>(int64_t m, int64_t n, hamr::buffer<double>& src, int64_t column_start, int64_t column_end, hamr::buffer<double>& dst);
 
 
 template void eye<float>(int64_t m, int64_t n, hamr::buffer<float>& A );
