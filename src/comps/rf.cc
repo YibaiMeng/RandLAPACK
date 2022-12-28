@@ -21,16 +21,15 @@ void RF<T>::rf1(
     using namespace lapack;
     LOG_F(INFO, "Allocating Omega");
     hamr::buffer<T> Omega(A.get_allocator(), n * k, 0.0);
-    T* Omega_dat = Omega.data();
-    T* Q_dat = Q.data();
+    Omega.synchronize();
     LOG_F(INFO, "Starting row sketcher");
     this->RS_Obj.call(m, n, A, k, Omega, queue);
     LOG_F(INFO, "Finishing row sketcher");
     LOG_F(INFO, "Starting A @ Omega");
 
     // Q = orth(A * Omega)
-    if(queue) gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega_dat, n, 0.0, Q_dat, m, *queue);
-    else gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega_dat, n, 0.0, Q_dat, m);
+    if(queue) gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Q.data(), m, *queue);
+    else gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Q.data(), m);
     LOG_F(INFO, "Finishing A @ Omega");
 
     if(this->cond_check)

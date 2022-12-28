@@ -32,7 +32,7 @@ void slice_columns(int64_t m,
   assert(column_end > column_start);
   assert(src.size() == m * n);
   assert(dst.size() == (column_end - column_start) * m);
-  assert(src.get_allocator() == dst.get_allocater());
+  assert(src.get_allocator() == dst.get_allocator());
   dst.set(0, src, column_start * m, (column_end - column_start) * m);
 }
 

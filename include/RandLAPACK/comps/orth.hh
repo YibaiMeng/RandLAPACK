@@ -66,9 +66,9 @@ class Orth : public Stabilization<T> // TODO #1
                         if(Q.get_allocator() != hamr::buffer_allocator::cpp) {
                             LOG_F(INFO, "Input for orthogonalization not on CPU");
                             CHECK_F(queue != nullptr, "Why is Q not on CPU when there isn't a queue?");
-                            queue->sync();
                             Q.move(hamr::buffer_allocator::cpp);
-                            Q.synchronize();
+                            Q.synchronize();                            
+                            queue->sync();
                         }
 
                         // Default
