@@ -40,8 +40,9 @@ protected:
     virtual void TearDown(){};
 
     template <typename T>
-    static void test_rsvd(int64_t m, int64_t n, int64_t rank, int64_t target_rank, uint32_t seed, hamr::buffer_allocator alloc)
+    static void test_rsvd(int64_t m, int64_t n, int64_t rank, int64_t target_rank, uint32_t seed, hamr::buffer_allocator alloc, bool check_diff = false)
     {
+        LOG_F(INFO, "RSVD on %i by %i matrix", m, n);
         // Subroutine parameters
         bool verbosity = true;
         bool cond_check = false;
@@ -62,7 +63,7 @@ protected:
             RS,
             Orth_RF,
             RF);
-        int64_t n_oversamples = 2;
+        int64_t n_oversamples = 5;
         int64_t k = n_oversamples + target_rank;
         LOG_F(INFO, "Actual rank of test input is %i. Target rank %i, number of samples %i", rank, target_rank, k);
         hamr::buffer<T> U(alloc, m * target_rank, 0.0);
@@ -104,6 +105,8 @@ protected:
         auto stop_svd = high_resolution_clock::now();
         long dur_svd = duration_cast<microseconds>(stop_svd - start_svd).count();
         LOG_F(INFO, "SVD completed in %ld us", dur_svd);
+        if(check_diff) {
+        LOG_F(INFO, "Reconstructing A from top %i singular values of the exact SVD", target_rank);
         hamr::buffer<T> A_reconstruct_gold(hamr::buffer_allocator::cpp, m * n, 0.0);
         hamr::buffer<T> U_tmp_gold(hamr::buffer_allocator::cpp, m * n, 0.0);
         hamr::buffer<T> S_diag_gold(hamr::buffer_allocator::cpp, target_rank * n, 0.0);
@@ -112,9 +115,9 @@ protected:
         blas::gemm<T>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, target_rank, 1.0, U_gold.data(), m, S_diag_gold.data(), target_rank, 0, U_tmp_gold.data(), m);
         // A_reconstruct = U_tmp @ VT
         blas::gemm<T>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, n, 1.0, U_tmp_gold.data(), m, VT_gold.data(), n, 0, A_reconstruct_gold.data(), m);
-        print_mat(target_rank, 1, S_gold);
-        print_mat(target_rank, 1, S);
-        LOG_F(INFO, "Reconstructing from target");
+        print_mat(1, target_rank, S_gold);
+        print_mat(1, target_rank, S);
+        LOG_F(INFO, "Reconstructing A from RSVD results");
         hamr::buffer<T> A_reconstruct(hamr::buffer_allocator::cpp, m * n, 0.0);
         hamr::buffer<T> U_tmp(hamr::buffer_allocator::cpp, m * n, 0.0);
         hamr::buffer<T> S_diag(hamr::buffer_allocator::cpp, target_rank * n, 0.0);
@@ -128,6 +131,7 @@ protected:
         T norm_orig = lapack::lange(lapack::Norm::Fro, m, n, A.data(), m);
         T norm_diff = lapack::lange(lapack::Norm::Fro, m, n, A_reconstruct_gold.data(), m);
         LOG_F(INFO, "Frobenius norm of the difference between reconstructions: %f; Norm of input: %f", norm_diff, norm_orig);
+        }
     }
 };
 
