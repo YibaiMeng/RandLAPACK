@@ -45,6 +45,7 @@ namespace RandLAPACK::comps::rsvd
                 // Q = find_range(A, n_samples, n_subspace_iters)
                 // Q: (m, k)
                 hamr::buffer<T> Q(A_alloc, m * k, 0.0);
+                Q.synchronize();
                 LOG_F(INFO, "Rangefinder started");
                 range_finder_obj.call(m, n, A, k, Q, queue);
                 LOG_F(INFO, "Rangefinder finished");
@@ -58,6 +59,7 @@ namespace RandLAPACK::comps::rsvd
                         T *Q_dat = Q.data();
                         T *A_dat = A.data();
                         T *B_dat = B.data();
+                        B.synchronize();
                         LOG_F(INFO, "B = Q.T @ A started on GPU");
                         gemm(Layout::ColMajor, Op::Trans, Op::NoTrans, k, n, m, (T)1.0, Q_dat, m, A_dat, m, (T)0.0, B_dat, k, (*blas_queue));
                 }
