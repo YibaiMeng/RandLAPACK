@@ -92,7 +92,7 @@ protected:
         A.move(hamr::buffer_allocator::cpp);
         A.synchronize();
         LOG_F(INFO, "Calculating exact SVD");
-        hamr::buffer<T> U_gold(hamr::buffer_allocator::cpp, m * n, 0.0);
+        hamr::buffer<T> U_gold(hamr::buffer_allocator::cpp, m * m, 0.0);
         hamr::buffer<T> S_gold(hamr::buffer_allocator::cpp, n, 0.0);
         hamr::buffer<T> VT_gold(hamr::buffer_allocator::cpp, n * n, 0.0);
         lapack::gesdd(lapack::Job::AllVec, m, n, A.data(), m, S_gold.data(), U_gold.data(), m, VT_gold.data(), n);

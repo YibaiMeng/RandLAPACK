@@ -5,7 +5,6 @@
 #include <loguru.hpp>
 using namespace RandLAPACK::comps::util;
 
-using namespace RandLAPACK::comps::util;
 
 namespace RandLAPACK::comps::rsvd
 {

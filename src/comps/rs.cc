@@ -55,7 +55,7 @@ void RS<T>::rs1(
 		else gemm<T>(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n);
 
 		++ p_done;
-		// If only need to call Stab_Obj once
+		// If q == 1
 		if (p_done % q == 0) 
 		{
 			this->Stab_Obj.call(n, k, Omega, queue);
