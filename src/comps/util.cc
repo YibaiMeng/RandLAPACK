@@ -7,6 +7,7 @@ TODO #1: Test get_L.
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <iomanip>
 
 #include <lapack.hh>
 #include <RandBLAS.hh>
@@ -487,6 +488,41 @@ bool orthogonality_check(
         return false;
 }
 
+
+// Assumes column major
+template <typename T>
+void print_mat(int m, int n, hamr::buffer<T> &buff, bool python)
+{
+    auto shared_ptr = buff.get_cpu_accessible();
+    auto ptr = shared_ptr.get();
+    std::cerr << "[";
+    for (int r = 0; r < m; r++)
+    {
+        if (python)
+            std::cerr << "[";
+        for (int c = 0; c < n; c++)
+        {
+            std::cerr << std::setw(10);
+            std::cerr << ptr[r + c * m];
+            if (python)
+                std::cerr << ", ";
+            else
+                std::cerr << " ";
+        }
+        if (python)
+        {
+            std::cerr << "]";
+            if (r < m - 1)
+                std::cerr << ",";
+            if (r == m - 1)
+                std::cerr << "]";
+        }
+        std::cerr << std::endl;
+    }
+    return;
+}
+
+
 template void eye<float>(int64_t m, int64_t n, hamr::buffer<float>& A );
 template void eye<double>(int64_t m, int64_t n, hamr::buffer<double>& A );
 
@@ -528,4 +564,8 @@ template void cond_num_check(int64_t m, int64_t n, const hamr::buffer<double>& A
 
 template bool orthogonality_check(int64_t m, int64_t n, int64_t k, const hamr::buffer<float>& A, hamr::buffer<float>& A_gram, bool verbosity);
 template bool orthogonality_check(int64_t m, int64_t n, int64_t k, const hamr::buffer<double>& A, hamr::buffer<double>& A_gram, bool verbosity);
+
+template void print_mat(int m, int n, hamr::buffer<float> &buff, bool python);
+template void print_mat(int m, int n, hamr::buffer<double> &buff, bool python);
+
 } // end namespace util

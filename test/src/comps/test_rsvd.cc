@@ -31,39 +31,6 @@ static void gen_rand_mat(int m, int n, int k, hamr::buffer<T> &buff)
 {
 }
 
-// Assumes column major
-template <typename T>
-static void print_mat(int m, int n, hamr::buffer<T> &buff, bool python = false)
-{
-    auto shared_ptr = buff.get_cpu_accessible();
-    buff.synchronize();
-    auto ptr = shared_ptr.get();
-    std::cerr << "[";
-    for (int r = 0; r < m; r++)
-    {
-        if (python)
-            std::cerr << "[";
-        for (int c = 0; c < n; c++)
-        {
-            std::cerr << std::setw(10);
-            std::cerr << ptr[r + c * m];
-            if (python)
-                std::cerr << ", ";
-            else
-                std::cerr << " ";
-        }
-        if (python)
-        {
-            std::cerr << "]";
-            if (r < m - 1)
-                std::cerr << ",";
-            if (r == m - 1)
-                std::cerr << "]";
-        }
-        std::cerr << std::endl;
-    }
-    return;
-}
 
 class TestRsvd : public ::testing::Test
 {

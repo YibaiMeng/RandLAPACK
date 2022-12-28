@@ -176,4 +176,11 @@ bool orthogonality_check(
         bool verbosity
 );
 
+template <typename T> 
+void print_mat(
+        int m,
+        int n,
+        hamr::buffer<T>& A,
+        bool python = false
+);
 } // end namespace RandLAPACK::comps::rs
