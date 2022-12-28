@@ -2,7 +2,12 @@
 #include <blas.hh>
 #define BLAS_HH
 #endif
+#ifndef LAPACK_HH
+#include <lapack.hh>
+#endif
+#include <lapack/device.hh>
 #include <hamr_buffer.h>
+#include <loguru.hpp>
 
 namespace RandLAPACK::comps::orth {
 
@@ -16,7 +21,8 @@ class Stabilization
                 virtual int call(
                         int64_t m,
                         int64_t k,
-                        hamr::buffer<T>& Q
+                        hamr::buffer<T>& Q,
+                        lapack::Queue* queue = nullptr
                 ) = 0;
 };
 
@@ -53,8 +59,18 @@ class Orth : public Stabilization<T> // TODO #1
                 int call(
                         int64_t m,
                         int64_t k,
-                        hamr::buffer<T>& Q
+                        hamr::buffer<T>& Q,
+                        lapack::Queue * queue = nullptr
                 ){
+                        auto prev_alloc = Q.get_allocator();
+                        if(Q.get_allocator() != hamr::buffer_allocator::cpp) {
+                            LOG_F(INFO, "Input for orthogonalization not on CPU");
+                            CHECK_F(queue != nullptr, "Why is Q not on CPU when there isn't a queue?");
+                            queue->sync();
+                            Q.move(hamr::buffer_allocator::cpp);
+                            Q.synchronize();
+                        }
+
                         // Default
                         int termination = 0;
                         switch(this->decision_orth)
@@ -79,6 +95,8 @@ class Orth : public Stabilization<T> // TODO #1
                                 case 2: 
                                         termination = GEQR(m, k, Q);
                         }
+                        Q.move(prev_alloc);
+                        Q.synchronize();
                         return termination;
                 }
 };
@@ -102,8 +120,18 @@ class Stab : public Orth<T>
                 virtual int call(
                         int64_t m,
                         int64_t k,
-                        hamr::buffer<T>& Q
+                        hamr::buffer<T>& Q,
+                        lapack::Queue* queue = nullptr
                 ){
+                        LOG_F(INFO, "Starting Stabilization");
+                        auto prev_alloc = Q.get_allocator();
+                        if(Q.get_allocator() != hamr::buffer_allocator::cpp) {
+                            LOG_F(INFO, "Input for stabilization not on CPU");
+                            CHECK_F(queue != nullptr, "Why is Q not on CPU when there isn't a queue?");
+                            queue->sync();
+                            Q.move(hamr::buffer_allocator::cpp);
+                            Q.synchronize();
+                        }
                         int termination = 0;
                         switch(this->decision_stab)
                         {
@@ -125,6 +153,9 @@ class Stab : public Orth<T>
                                         termination = PLU(m, k, Q);
                                         break;
                         }
+                        Q.move(prev_alloc);
+                        Q.synchronize();
+                        LOG_F(INFO, "Finishing Stabilization");
                         return termination;
                 }
 };

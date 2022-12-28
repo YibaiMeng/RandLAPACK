@@ -22,7 +22,9 @@ namespace RandLAPACK::comps::rsvd
                     int64_t n_subspace_iters, // Number of power iterations.
                     hamr::buffer<T> &U,
                     hamr::buffer<T> &S,
-                    hamr::buffer<T> &VT) = 0;
+                    hamr::buffer<T> &VT,
+                    lapack::Queue* q  = nullptr // Execution context for device.
+                    ) = 0;
         };
 
         /// The sketching implementation with fixed rank objective, as shown in Halko 2011.
@@ -50,7 +52,8 @@ namespace RandLAPACK::comps::rsvd
                     int64_t n_subspace_iters, // Number of power iterations.
                     hamr::buffer<T> &U,
                     hamr::buffer<T> &S,
-                    hamr::buffer<T> &VT);
+                    hamr::buffer<T> &VT, 
+                    lapack::Queue* q  = nullptr);
                 
         };
 } // end namespace RandLAPACK::comps::rsvd

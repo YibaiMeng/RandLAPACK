@@ -21,7 +21,8 @@ class RangeFinder
                         int64_t n,
                         const hamr::buffer<T>& A,
                         int64_t k,
-                        hamr::buffer<T>& Q
+                        hamr::buffer<T>& Q,
+                        lapack::Queue* queue = nullptr
                 ) = 0;    
 };
 
@@ -61,7 +62,8 @@ class RF : public RangeFinder<T>
                         int64_t n,
                         const hamr::buffer<T>& A,
                         int64_t k,
-                        hamr::buffer<T> & Q
+                        hamr::buffer<T> & Q,
+                        lapack::Queue* queue
                 );
 
                 // Control of RF types calls.
@@ -70,12 +72,13 @@ class RF : public RangeFinder<T>
                         int64_t n,
                         const hamr::buffer<T>& A,
                         int64_t k,
-                        hamr::buffer<T>& Q
+                        hamr::buffer<T>& Q,
+                        lapack::Queue* queue  = nullptr
                 ){
                         switch(this->decision_RF)
                         {
                                 case 0:
-                                        rf1(m, n, A, k, Q);
+                                        rf1(m, n, A, k, Q, queue);
                                         break;
                         }
                 }

@@ -20,7 +20,8 @@ class RowSketcher
 			int64_t n,
 			const hamr::buffer<T>& A,
 			int64_t k,
-			hamr::buffer<T>& Omega 
+			hamr::buffer<T>& Omega,
+			lapack::Queue* queue
 		) = 0;
 };
 
@@ -63,7 +64,8 @@ class RS : public RowSketcher<T>
 			int64_t n,
 			const hamr::buffer<T>& A,
 			int64_t k,
-			hamr::buffer<T>& Omega 
+			hamr::buffer<T>& Omega,
+            lapack::Queue* queue
 		);
 
 		virtual void call(
@@ -71,12 +73,13 @@ class RS : public RowSketcher<T>
 			int64_t n,
 			const hamr::buffer<T>& A,
 			int64_t k,
-			hamr::buffer<T>& Omega 
+			hamr::buffer<T>& Omega,
+			lapack::Queue* queue = nullptr
 		){
 			switch(this->decision_RS)
 			{
 				case 0:
-					rs1(m, n, A, k, Omega);
+					rs1(m, n, A, k, Omega, queue);
 					break;
 			}
 		}
