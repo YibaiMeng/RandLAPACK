@@ -137,5 +137,25 @@ protected:
 
 TEST_F(TestRsvd, SimpleTest)
 {
-    test_rsvd<double>(200, 200, 70, 10, 271, hamr::buffer_allocator::cuda);
+    // Testing square matrices
+    std::vector<int> square_matrice_size({100, 500, 1000, 2000, 4000, 5000, 8000});
+    
+    for(int n : square_matrice_size) {
+        test_rsvd<double>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cuda, false);
+    }
+    // Testing CPU version
+    for(int n : square_matrice_size) {
+        test_rsvd<double>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cpp, false);
+    }
+    // float32
+    // Testing square matrices
+    for(int n : square_matrice_size) {
+        test_rsvd<float>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cuda, false);
+    }
+    // Testing CPU version
+    for(int n : square_matrice_size) {
+        test_rsvd<float>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cpp, false);
+    }
+
+
 }
