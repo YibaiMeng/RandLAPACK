@@ -25,7 +25,6 @@ using namespace RandLAPACK::comps::rs;
 using namespace RandLAPACK::comps::rf;
 using namespace RandLAPACK::comps::qb;
 
-
 class RsvdSpeed : public ::testing::Test
 {
 protected:
@@ -34,7 +33,8 @@ protected:
     virtual void TearDown(){};
     //         A(hamr::buffer_allocator::cpp, m * n, 0.0);
     template <typename T>
-    static void generate_random_low_rank_mat(int m, int n, int rank, hamr::buffer<T>& A, int seed) {
+    static void generate_random_low_rank_mat(int m, int n, int rank, hamr::buffer<T> &A, int seed)
+    {
         hamr::buffer<T> src_1(hamr::buffer_allocator::cpp, m * rank, 0.0), src_2(hamr::buffer_allocator::cpp, rank * n, 0.0);
         RandBLAS::dense_op::gen_rmat_norm<T>(m, rank, src_1.data(), seed);
         RandBLAS::dense_op::gen_rmat_norm<T>(rank, n, src_2.data(), seed + 1);
@@ -42,7 +42,7 @@ protected:
     }
 
     template <typename T>
-    static long test_rsvd(int64_t m, int64_t n, int64_t actual_rank, int64_t target_rank, uint32_t seed, hamr::buffer<T>& A, int n_subspace_iters = 2)
+    static long test_rsvd(int64_t m, int64_t n, int64_t actual_rank, int64_t target_rank, uint32_t seed, hamr::buffer<T> &A, int n_subspace_iters = 2)
     {
         LOG_F(INFO, "RSVD on %i by %i matrix", m, n);
         auto alloc = A.get_allocator();
@@ -87,18 +87,16 @@ protected:
 TEST_F(RsvdSpeed, RsvdSpeed)
 {
 
-
     // Generating various matrices
 
-    //hamr::buffer<T> A(alloc, m * n, 0.0);
-    //gen_mat_type<T>(m, n, A, k, seed, mat_type);
+    // hamr::buffer<T> A(alloc, m * n, 0.0);
+    // gen_mat_type<T>(m, n, A, k, seed, mat_type);
 
-    
     LOG_F(WARNING, "It takes dozens of seconds for the GPU to get out of sleep and power up. Warming up before measurement");
     {
         int n = 500;
         hamr::buffer<double> A(hamr::buffer_allocator::cpp, n * n, 0.0);
-        int actual_rank = (int)(n*0.1);
+        int actual_rank = (int)(n * 0.1);
         generate_random_low_rank_mat<double>(n, n, actual_rank, A, 271);
         CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
         A.synchronize();
@@ -106,57 +104,83 @@ TEST_F(RsvdSpeed, RsvdSpeed)
         long t = test_rsvd<double>(n, n, actual_rank, target_rank, 271, A, 2);
     }
 
-
     // Testing square matrices
     std::vector<int> square_matrice_size({100, 500, 1000, 2000, 4000, 5000, 8000});
     std::fstream file;
     // TODO: where to put the file?
     file.open("test_rsvd_speed_square_gpu.dat", std::fstream::app);
-    file << "desc" << "," << "float_precision" << "," << "width" << "," << "height" << "," << "target_rank" << "," << "subspace_iters" << "," << "time_us" << std::endl;
+    file << "desc"
+         << ","
+         << "float_precision"
+         << ","
+         << "width"
+         << ","
+         << "height"
+         << ","
+         << "target_rank"
+         << ","
+         << "subspace_iters"
+         << ","
+         << "time_us" << std::endl;
 
-    for(int n : square_matrice_size) {
+    for (int n : square_matrice_size)
+    {
         hamr::buffer<double> A(hamr::buffer_allocator::cpp, n * n, 0.0);
-        int actual_rank = (int)(n*0.1);
+        int actual_rank = (int)(n * 0.1);
         generate_random_low_rank_mat<double>(n, n, actual_rank, A, 271);
         CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
         A.synchronize();
         int target_rank = actual_rank + 5;
         long t = test_rsvd<double>(n, n, actual_rank, actual_rank + 5, 271, A, 2);
-        file << "square" << "," << "double" << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << std::endl;
+        file << "square"
+             << ","
+             << "double"
+             << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << std::endl;
         t = test_rsvd<double>(n, n, actual_rank, actual_rank + 5, 271, A, 5);
-        file << "square" << "," << "double" << "," << n << "," << n << "," << target_rank << "," << 5 << "," << t << std::endl;
+        file << "square"
+             << ","
+             << "double"
+             << "," << n << "," << n << "," << target_rank << "," << 5 << "," << t << std::endl;
     }
-    
-    for(int n : square_matrice_size) {
+
+    for (int n : square_matrice_size)
+    {
         hamr::buffer<double> A(hamr::buffer_allocator::cpp, n * n / 2, 0.0);
-        int actual_rank = (int)(n*0.1);
+        int actual_rank = (int)(n * 0.1);
         generate_random_low_rank_mat<double>(n, n / 2, actual_rank, A, 271);
         CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
         A.synchronize();
         int target_rank = actual_rank + 5;
-        long t = test_rsvd<double>(n, n/2, actual_rank, actual_rank + 5, 271, A, 2);
-        file << "rectangle" << "," << "double" << "," << n << "," << n/2 << "," << target_rank << "," << 2 << "," << t << std::endl;
-        t = test_rsvd<double>(n, n, actual_rank, actual_rank + 5, 271, A, 5);
-        file << "rectangle" << "," << "double" << "," << n << "," << n/2 << "," << target_rank << "," << 5 << "," << t << std::endl;
+        long t = test_rsvd<double>(n, n / 2, actual_rank, actual_rank + 5, 271, A, 2);
+        file << "rectangle"
+             << ","
+             << "double"
+             << "," << n << "," << n / 2 << "," << target_rank << "," << 2 << "," << t << std::endl;
+        t = test_rsvd<double>(n, n / 2, actual_rank, actual_rank + 5, 271, A, 5);
+        file << "rectangle"
+             << ","
+             << "double"
+             << "," << n << "," << n / 2 << "," << target_rank << "," << 5 << "," << t << std::endl;
     }
 
-
-    for(int n : square_matrice_size) {
+    for (int n : square_matrice_size)
+    {
         hamr::buffer<float> A(hamr::buffer_allocator::cpp, n * n, 0.0);
-        int actual_rank = (int)(n*0.1);
+        int actual_rank = (int)(n * 0.1);
         generate_random_low_rank_mat<float>(n, n, actual_rank, A, 271);
         CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
         A.synchronize();
         int target_rank = actual_rank + 5;
         long t = test_rsvd<float>(n, n, actual_rank, actual_rank + 5, 271, A, 2);
-        file << "square" << "," << "float" << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << std::endl;
+        file << "square"
+             << ","
+             << "float"
+             << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << std::endl;
         t = test_rsvd<float>(n, n, actual_rank, actual_rank + 5, 271, A, 5);
-        file << "square" << "," << "float" << "," << n << "," << n << "," << target_rank << "," << 5 << "," << t << std::endl;
+        file << "square"
+             << ","
+             << "float"
+             << "," << n << "," << n << "," << target_rank << "," << 5 << "," << t << std::endl;
     }
-
-    file.close()
-;    // 2:1 matrices
-    //std::vector<int> square_matrice_size({100, 500, 1000, 2000, 4000, 5000, 8000});
-
-
+    file.close();
 }

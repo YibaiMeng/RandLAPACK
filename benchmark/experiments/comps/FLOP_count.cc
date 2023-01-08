@@ -21,7 +21,7 @@ class BenchmarkUtil : public ::testing::Test
 
     template <typename T>
     static void 
-    test_flops(int k, uint32_t seed，hamr::buffer_allocator alloc)
+    test_flops(int k, uint32_t seed, hamr::buffer_allocator alloc)
     {
         printf("|===================================TEST SYSTEM FLOPS BEGIN====================================|\n");
         int size = k * k;
