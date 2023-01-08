@@ -7,6 +7,7 @@ if (GTest_FOUND)
     set(RandLAPACK_experiments_cxx_srcs
         experiments/comps/QB_cond_nums.cc 
         experiments/comps/Orth_speed.cc
+        experiments/comps/rsvd_speed.cc
     )
     set_source_files_properties(${RandLAPACK_experiments_cxx_srcs} PROPERTIES LANGUAGE CUDA)
     add_executable(RandLAPACK_benchmark ${RandLAPACK_experiments_cxx_srcs})
