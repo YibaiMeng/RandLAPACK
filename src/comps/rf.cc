@@ -19,25 +19,25 @@ void RF<T>::rf1(
 ){
     using namespace blas;
     using namespace lapack;
-    LOG_F(INFO, "Allocating Omega");
+    LOG_F(1, "Allocating Omega");
     hamr::buffer<T> Omega(A.get_allocator(), n * k, 0.0);
     Omega.synchronize();
-    LOG_F(INFO, "Starting row sketcher");
+    LOG_F(1, "Omega allocated");
+    LOG_F(1, "Starting row sketcher");
     this->RS_Obj.call(m, n, A, k, Omega, queue);
-    LOG_F(INFO, "Finishing row sketcher");
-    LOG_F(INFO, "Starting A @ Omega");
+    LOG_F(1, "Finishing row sketcher");
+    LOG_F(1, "Starting A @ Omega");
 
     // Q = orth(A * Omega)
     if(queue) gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Q.data(), m, *queue);
     else gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Q.data(), m);
-    LOG_F(INFO, "Finishing A @ Omega");
-
+    LOG_F(1, "Finishing A @ Omega");
     if(this->cond_check)
         // Writes into this->cond_nums
         cond_num_check<T>(m, k, Q, this->cond_nums, this->verbosity);
-    LOG_F(INFO, "Starting orth(A @ Omega)");
+    LOG_F(1, "Starting orth(A @ Omega)");
     this->Orth_Obj.call(m, k, Q, queue);
-    LOG_F(INFO, "Finishing orth(A @ Omega)");
+    LOG_F(1, "Finishing orth(A @ Omega)");
 
 }
 

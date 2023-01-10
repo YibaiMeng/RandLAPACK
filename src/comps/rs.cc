@@ -16,8 +16,8 @@ void RS<T>::rs1(
 	hamr::buffer<T>& Omega,
 	lapack::Queue* queue 
 ){
-	if(queue != nullptr) LOG_F(INFO, "rs1 on GPU");
-	else LOG_F(INFO, "rs1 on CPU");
+	if(queue != nullptr) LOG_F(1, "rs1 on GPU");
+	else LOG_F(1, "rs1 on CPU");
 	using namespace blas;
 	using namespace lapack;
 	// The blas ops require a blas::Queue as input.
@@ -25,7 +25,7 @@ void RS<T>::rs1(
 
 	int64_t p = this->passes_over_data;
 	int64_t q = this->passes_per_stab;
-	LOG_F(INFO, "rs1: %i passes over data. Stabilization once every %i pass", p, q);
+	LOG_F(1, "rs1: %i passes over data. Stabilization once every %i pass", p, q);
 	int32_t seed = this->seed;
 	int64_t p_done= 0;
 	

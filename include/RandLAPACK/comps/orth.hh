@@ -64,7 +64,7 @@ class Orth : public Stabilization<T> // TODO #1
                 ){
                         auto prev_alloc = Q.get_allocator();
                         if(Q.get_allocator() != hamr::buffer_allocator::cpp) {
-                            LOG_F(INFO, "Input for orthogonalization not on CPU");
+                            LOG_F(1, "Input for orthogonalization not on CPU");
                             CHECK_F(queue != nullptr, "Why is Q not on CPU when there isn't a queue?");
                             queue->sync();
                             CHECK_F(Q.move(hamr::buffer_allocator::cpp) == 0, "move unsuccessful");
@@ -123,10 +123,10 @@ class Stab : public Orth<T>
                         hamr::buffer<T>& Q,
                         lapack::Queue* queue = nullptr
                 ){
-                        LOG_F(INFO, "Starting Stabilization");
+                        LOG_F(1, "Starting stabilization");
                         auto prev_alloc = Q.get_allocator();
                         if(Q.get_allocator() != hamr::buffer_allocator::cpp) {
-                            LOG_F(INFO, "Input for stabilization not on CPU");
+                            LOG_F(1, "Input for stabilization not on CPU");
                             CHECK_F(queue != nullptr, "Why is Q not on CPU when there isn't a queue?");
                             queue->sync();
                             CHECK_F(Q.move(hamr::buffer_allocator::cpp) == 0, "Move unsuccessful");
@@ -155,7 +155,7 @@ class Stab : public Orth<T>
                         }
                         CHECK_F(Q.move(prev_alloc) == 0, "Move unsuccessful");
                         Q.synchronize();
-                        LOG_F(INFO, "Finishing Stabilization");
+                        LOG_F(1, "Finishing stabilization");
                         return termination;
                 }
 };
