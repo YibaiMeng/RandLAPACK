@@ -40,44 +40,14 @@ protected:
     virtual void TearDown(){};
 
     template <typename T>
-    static void test_rsvd(int64_t m, int64_t n, int64_t rank, int64_t target_rank, uint32_t seed, hamr::buffer_allocator alloc, bool check_diff = false)
+    static void test_rsvd(int64_t m, int64_t n, hamr::buffer<T>& A, RSVD<T>& rsvd_obj, int64_t rank, int64_t target_rank, int64_t n_subspace_iters, int64_t n_oversamples, uint32_t seed, hamr::buffer_allocator alloc, bool check_diff = false)
     {
         LOG_F(INFO, "RSVD on %i by %i matrix", m, n);
-        // Subroutine parameters
-        bool verbosity = true;
-        bool cond_check = false;
-        // bool orth_check = true;
-
-        // Make subroutine objects
-        // Stabilization Constructor - Choose default
-        Stab<T> Stab(0);
-        int64_t n_subspace_iters = 5, passes_per_stablizer = 5;
-        // RowSketcher constructor - Choose default (rs1)
-        RS<T> RS(Stab, seed, n_subspace_iters, passes_per_stablizer, verbosity, cond_check, 0);
-        // Orthogonalization Constructor - Choose CholQR.
-        Orth<T> Orth_RF(0);
-        // RangeFinder constructor - Choose default (rf1)
-        RF<T> RF(RS, Orth_RF, verbosity, cond_check, 0);
-        // Orthogonalization Constructor
-        RSVD<T> rsvd_obj(
-            RS,
-            Orth_RF,
-            RF);
-        int64_t n_oversamples = 5;
-        int64_t k = n_oversamples + target_rank;
+        int k = target_rank + n_oversamples;
         LOG_F(INFO, "Actual rank of test input is %i. Target rank %i, number of samples %i", rank, target_rank, k);
         hamr::buffer<T> U(alloc, m * target_rank, 0.0);
         hamr::buffer<T> S(alloc, k, 0.0);
         hamr::buffer<T> VT(alloc, n * n, 0.0);
-        // The cublas implementation has a bug: if you do not init everything to a value,
-        // then there might be NaNs, even if beta is 0.0 in GEMM.
-        hamr::buffer<T> A(hamr::buffer_allocator::cpp, m * n, 0.0);
-        hamr::buffer<T> src_1(hamr::buffer_allocator::cpp, m * rank, 0.0), src_2(hamr::buffer_allocator::cpp, rank * n, 0.0);
-        RandBLAS::dense_op::gen_rmat_norm<T>(m, rank, src_1.data(), seed);
-        RandBLAS::dense_op::gen_rmat_norm<T>(rank, n, src_2.data(), seed + 1);
-        blas::gemm<T>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, rank, 1.0, src_1.data(), m, src_2.data(), rank, 0, A.data(), m);
-        CHECK_F(A.move(alloc) == 0);
-        A.synchronize();
         lapack::Queue *q = nullptr;
         if (alloc == hamr::buffer_allocator::cuda)
             q = new lapack::Queue(0, 0);
@@ -137,25 +107,86 @@ protected:
 
 TEST_F(TestRsvd, SimpleTest)
 {
-    // Testing square matrices
-    std::vector<int> square_matrice_size({100, 500, 1000, 2000, 4000, 5000, 8000});
-    
-    for(int n : square_matrice_size) {
-        test_rsvd<double>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cuda, false);
-    }
-    // Testing CPU version
-    for(int n : square_matrice_size) {
-        test_rsvd<double>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cpp, false);
-    }
-    // float32
-    // Testing square matrices
-    for(int n : square_matrice_size) {
-        test_rsvd<float>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cuda, false);
-    }
-    // Testing CPU version
-    for(int n : square_matrice_size) {
-        test_rsvd<float>(n, n, (int)(n * 0.1), (int)(n * 0.1 + 5), 271, hamr::buffer_allocator::cpp, false);
-    }
+    int32_t seed = 271;
 
+    bool verbosity = true;
+    bool cond_check = false;
+    // Make subroutine objects
+    // Stabilization Constructor - Choose default
+    Stab<double> Stab(0);
+    int64_t n_subspace_iters = 5, passes_per_stablizer = 1, n_oversamples = 5;
+    // RowSketcher constructor - Choose default (rs1) (as well as the only implementation)
+    RS<double> RS(Stab, seed, n_subspace_iters, passes_per_stablizer, verbosity, cond_check, 0);
+    // Orthogonalization Constructor - Choose CholQR.
+    Orth<double> Orth_RF(0);
+    // RangeFinder constructor - Choose default (rf1) (as well as the only implementation)
+    RF<double> RF(RS, Orth_RF, verbosity, cond_check, 0);
+    // Orthogonalization Constructor
+    RSVD<double> rsvd_obj(
+        RS,
+        Orth_RF,
+        RF);
+    
+    int64_t m = 100, n = 100;
+    int64_t rank = 50;
+    int64_t target_rank = 5;
+    hamr::buffer_allocator alloc = hamr::buffer_allocator::cuda;
+    hamr::buffer<double> A(alloc, m * n, 0.0);
+
+    // polynomial decay tests:
+    // Fast polynomial decay test
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(0, 2, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
+
+    // Slow polynomial decay test
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(0, 0.5, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
+    // Superfast exponential decay test
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(1, 2, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
+
+    // S-shaped decay matrix test
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(2, 0, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
+
+    // A = [A A]
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(3, 0, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
+
+    // A = 0
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(4, 0, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
+
+    // Random diagonal matrix test
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(5, 0, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
+
+    // A = diag(sigma), where sigma_1 = ... = sigma_l > sigma_{l + 1} = ... = sigma_n
+    A.move(hamr::buffer_allocator::cpp);
+    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(6, 0, false));
+    CHECK_F(A.move(alloc) == 0);
+    A.synchronize();
+    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
 
 }
