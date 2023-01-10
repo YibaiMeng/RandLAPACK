@@ -132,10 +132,10 @@ TEST_F(TestRsvd, SimpleTest)
     int64_t target_rank = 5;
     hamr::buffer_allocator alloc = hamr::buffer_allocator::cuda;
     hamr::buffer<double> A(alloc, m * n, 0.0);
-
     // polynomial decay tests:
     // Fast polynomial decay test
     A.move(hamr::buffer_allocator::cpp);
+    std::fill(A.data(), A.data() + A.size(), 0.0);
     gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(0, 2, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
@@ -143,12 +143,14 @@ TEST_F(TestRsvd, SimpleTest)
 
     // Slow polynomial decay test
     A.move(hamr::buffer_allocator::cpp);
+    std::fill(A.data(), A.data() + A.size(), 0.0);
     gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(0, 0.5, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
     test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
     // Superfast exponential decay test
     A.move(hamr::buffer_allocator::cpp);
+    std::fill(A.data(), A.data() + A.size(), 0.0);
     gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(1, 2, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
@@ -156,6 +158,7 @@ TEST_F(TestRsvd, SimpleTest)
 
     // S-shaped decay matrix test
     A.move(hamr::buffer_allocator::cpp);
+    std::fill(A.data(), A.data() + A.size(), 0.0);
     gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(2, 0, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
@@ -163,6 +166,7 @@ TEST_F(TestRsvd, SimpleTest)
 
     // A = [A A]
     A.move(hamr::buffer_allocator::cpp);
+    std::fill(A.data(), A.data() + A.size(), 0.0);
     gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(3, 0, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
@@ -170,13 +174,17 @@ TEST_F(TestRsvd, SimpleTest)
 
     // A = 0
     A.move(hamr::buffer_allocator::cpp);
-    gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(4, 0, false));
+    std::fill(A.data(), A.data() + A.size(), 0.0);
+    A.synchronize();
+
+    //gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(4, 0, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
     test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
 
     // Random diagonal matrix test
     A.move(hamr::buffer_allocator::cpp);
+    std::fill(A.data(), A.data() + A.size(), 0.0);
     gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(5, 0, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
@@ -184,6 +192,7 @@ TEST_F(TestRsvd, SimpleTest)
 
     // A = diag(sigma), where sigma_1 = ... = sigma_l > sigma_{l + 1} = ... = sigma_n
     A.move(hamr::buffer_allocator::cpp);
+    std::fill(A.data(), A.data() + A.size(), 0.0);
     gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(6, 0, false));
     CHECK_F(A.move(alloc) == 0);
     A.synchronize();
