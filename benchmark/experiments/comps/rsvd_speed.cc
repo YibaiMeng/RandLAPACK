@@ -25,6 +25,10 @@ using namespace RandLAPACK::comps::rs;
 using namespace RandLAPACK::comps::rf;
 using namespace RandLAPACK::comps::qb;
 
+namespace RandLAPACK::comps::util {
+    Timer profile_timer;
+}
+
 class RsvdSpeed : public ::testing::Test
 {
 protected:
@@ -74,10 +78,12 @@ protected:
         if (alloc == hamr::buffer_allocator::cuda)
             q = new lapack::Queue(0, 0);
         auto start_rsvd = high_resolution_clock::now();
+        profile_timer.start_tag("rsvd");
         rsvd_obj.call(m, n, A, target_rank, n_oversamples, n_subspace_iters, U, S, VT, q);
         if (q)
             q->sync();
         auto stop_rsvd = high_resolution_clock::now();
+        profile_timer.accumulate_tag("rsvd");
         long dur_rsvd = duration_cast<microseconds>(stop_rsvd - start_rsvd).count();
         LOG_F(INFO, "RSVD completed in %ld us", dur_rsvd);
         return dur_rsvd;

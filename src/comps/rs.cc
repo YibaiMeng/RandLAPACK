@@ -38,7 +38,9 @@ void RS<T>::rs1(
 		CHECK_F(Omega.move(hamr::buffer_allocator::cpp) == 0);
 		Omega.synchronize();
 		// Fill n by k Omega
+		profile_timer.start_tag("gen_rand");
 		RandBLAS::dense_op::gen_rmat_norm<T>(n, k, Omega.data(), seed);
+		profile_timer.accumulate_tag("gen_rand");
 		CHECK_F(Omega.move(A.get_allocator()) == 0);
 		Omega.synchronize();
 	}
@@ -47,43 +49,67 @@ void RS<T>::rs1(
 		CHECK_F(Omega_1.move(hamr::buffer_allocator::cpp) == 0);
 		Omega_1.synchronize();
 		// Fill m by k Omega_1
+		profile_timer.start_tag("gen_rand");
 		RandBLAS::dense_op::gen_rmat_norm<T>(m, k, Omega_1.data(), seed);
+		profile_timer.accumulate_tag("gen_rand");
 		CHECK_F(Omega_1.move(A.get_allocator()) == 0);
 		Omega_1.synchronize();
 		// multiply A' by Omega results in n by k omega
-		if(queue) gemm(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n, *blas_queue);
+		profile_timer.start_tag("gemm");
+		if(queue) {
+			gemm(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n, *blas_queue);
+		    queue->sync();
+		}
 		else gemm<T>(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n);
-
+        profile_timer.accumulate_tag("gemm");
 		++ p_done;
 		// If q == 1
 		if (p_done % q == 0) 
-		{
+		{			
+			profile_timer.start_tag("stab");
 			this->Stab_Obj.call(n, k, Omega, queue);
+			profile_timer.accumulate_tag("stab");
+
 		}
 	}
 	
 	while (p - p_done > 0) 
 	{
 		// Omega (m, k) = A * Omega (n, k)
-		if(queue) gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Omega_1.data(), m, *blas_queue);
+		profile_timer.start_tag("gemm");
+		if(queue) {
+			gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Omega_1.data(), m, *blas_queue);
+		    queue->sync();
+		}
 		else gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Omega_1.data(), m);
+        profile_timer.accumulate_tag("gemm");
 
 		++ p_done;
 		if (p_done % q == 0) 
 		{
+			profile_timer.start_tag("stab");
 			this->Stab_Obj.call(m, k, Omega_1, queue);
+			profile_timer.accumulate_tag("stab");
 		}
 
 		if(this->cond_check)
 			cond_num_check<T>(m, k, Omega_1, this->cond_nums, this->verbosity);
 
 		// Omega (n, k) = A^T * Omega (m, k)
-		if(queue) gemm(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n, *blas_queue);
+		profile_timer.start_tag("gemm");
+		if(queue) {
+			gemm(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n, *blas_queue);
+			queue->sync();
+		}
 		else gemm<T>(Layout::ColMajor, Op::Trans, Op::NoTrans, n, k, m, 1.0, A.data(), m, Omega_1.data(), m, 0.0, Omega.data(), n);
+        profile_timer.accumulate_tag("gemm");
 		++ p_done;
 		if (p_done % q == 0) 
 		{
+			profile_timer.start_tag("stab");
 			this->Stab_Obj.call(n, k, Omega, queue);
+			profile_timer.accumulate_tag("stab");
+
 		}
 		
 		if(this->cond_check)

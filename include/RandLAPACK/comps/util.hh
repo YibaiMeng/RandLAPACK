@@ -3,7 +3,8 @@
 #define BLAS_HH
 #endif
 #include <hamr_buffer.h>
-
+#include <chrono>
+#include <map>
 namespace RandLAPACK::comps::util {
 
 
@@ -196,4 +197,48 @@ void print_mat(
         hamr::buffer<T>& A,
         bool python = false
 );
+
+class Timer {
+   
+  public:
+      void start() {
+          start_time = std::chrono::high_resolution_clock::now();
+      }
+
+      void start_tag(std::string tg) {
+        auto curr_time = std::chrono::high_resolution_clock::now();
+          if(tag_start.find(tg) == tag_start.end()) {
+                tag_start.insert({tg, curr_time});
+          } else {
+                tag_start.at(tg) = curr_time;
+          }
+      }
+      void accumulate_tag(std::string tg) {
+          auto curr_time = std::chrono::high_resolution_clock::now();
+          long dur = std::chrono::duration_cast<std::chrono::microseconds>(curr_time - tag_start.at(tg)).count();
+          if(tags.find(tg) == tags.end()) {
+                tags.insert({tg, dur});
+          } else {
+                tags.at(tg) += dur;
+          }
+          tag_start.at(tg) = curr_time;
+      }
+
+      void clear() {
+        tags.clear();
+        tag_start.clear();
+      }
+
+      void print() {
+          for(auto& p : tags) {
+              std::cerr << p.first << ": " << p.second << "us" << std::endl;
+          }
+      }
+  private:
+      std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+      std::map<std::string, long> tags;
+      std::map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> tag_start;
+
+};
+extern Timer profile_timer;
 } // end namespace RandLAPACK::comps::rs

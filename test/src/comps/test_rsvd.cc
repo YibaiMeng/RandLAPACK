@@ -24,6 +24,9 @@ using namespace RandLAPACK::comps::orth;
 using namespace RandLAPACK::comps::rs;
 using namespace RandLAPACK::comps::rf;
 using namespace RandLAPACK::comps::qb;
+namespace RandLAPACK::comps::util {
+    Timer profile_timer;
+}
 
 // rand (m, k) * rand(k, n) = (m, n) with a (approx) rank of k. k < min(m, n)
 template <typename T>

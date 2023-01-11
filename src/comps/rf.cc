@@ -24,19 +24,30 @@ void RF<T>::rf1(
     Omega.synchronize();
     LOG_F(1, "Omega allocated");
     LOG_F(1, "Starting row sketcher");
+    profile_timer.start_tag("rs");
     this->RS_Obj.call(m, n, A, k, Omega, queue);
+    profile_timer.accumulate_tag("rs");
     LOG_F(1, "Finishing row sketcher");
     LOG_F(1, "Starting A @ Omega");
 
     // Q = orth(A * Omega)
-    if(queue) gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Q.data(), m, *queue);
+    profile_timer.start_tag("gemm");
+    if(queue) {
+        gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Q.data(), m, *queue);
+        queue->sync();
+    }
     else gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, k, n, 1.0, A.data(), m, Omega.data(), n, 0.0, Q.data(), m);
+    profile_timer.accumulate_tag("gemm");
     LOG_F(1, "Finishing A @ Omega");
+    
     if(this->cond_check)
         // Writes into this->cond_nums
         cond_num_check<T>(m, k, Q, this->cond_nums, this->verbosity);
     LOG_F(1, "Starting orth(A @ Omega)");
+    profile_timer.start_tag("orth");
     this->Orth_Obj.call(m, k, Q, queue);
+    profile_timer.accumulate_tag("orth");
+
     LOG_F(1, "Finishing orth(A @ Omega)");
 
 }

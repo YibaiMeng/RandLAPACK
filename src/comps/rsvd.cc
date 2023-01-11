@@ -61,11 +61,16 @@ namespace RandLAPACK::comps::rsvd
                         T *B_dat = B.data();
                         B.synchronize();
                         LOG_F(1, "B = Q.T @ A started on GPU");
+                        profile_timer.start_tag("gemm");
                         gemm(Layout::ColMajor, Op::Trans, Op::NoTrans, k, n, m, (T)1.0, Q_dat, m, A_dat, m, (T)0.0, B_dat, k, (*blas_queue));
+                        queue->sync();
+                        profile_timer.accumulate_tag("gemm");
                 }
                 else {
                         LOG_F(1, "B = Q.T @ A started on CPU");
+                        profile_timer.start_tag("gemm");
                         gemm<T>(Layout::ColMajor, Op::Trans, Op::NoTrans, k, n, m, (T)1.0, Q.data(), m, A.data(), m, (T)0.0, B.data(), k);
+                        profile_timer.accumulate_tag("gemm");
                         LOG_F(1, "B = Q.T @ A completed on CPU");
                 }
                 // U_tilde, S, Vt = np.linalg.svd(B)
@@ -83,7 +88,9 @@ namespace RandLAPACK::comps::rsvd
                 CHECK_F(S.move(hamr::buffer_allocator::cpp) == 0);
                 S.synchronize();
                 LOG_F(1, "Starting U_tilde, S, VT_cpu = gesvd(B)");
+                profile_timer.start_tag("svd");
                 gesvd(lapack::Job::AllVec, lapack::Job::AllVec, k, n, ptr.get(), k, S.data(), U_tilde.data(), k, VT_cpu.data(), n);
+                profile_timer.accumulate_tag("svd"      );
                 LOG_F(1, "Finished U_tilde, S, VT_cpu = gesvd(B)");
                 CHECK_F(U_tilde.move(A.get_allocator()) == 0);
                 // TODO: test out HAMR's sync behavior regarding memory and computation?
@@ -92,11 +99,13 @@ namespace RandLAPACK::comps::rsvd
                 // U (m, k)
                 // However, only the first "rank" columns of U is needed, so U is truncated to (m, rank).
                 // U (m, rank) = Q(m, k) @ U_tilde (k, rank)
+                profile_timer.start_tag("gemm");
                 if (queue)
                 {
                         LOG_F(1, "Starting U = Q @ U_tilde on GPU");
                         gemm(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, rank, k, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), m, *blas_queue);
                         queue->sync();
+                        
                         LOG_F(1, "Finishing U = Q @ U_tilde on GPU");
                 }
                 else {
@@ -104,6 +113,7 @@ namespace RandLAPACK::comps::rsvd
                         gemm<T>(Layout::ColMajor, Op::NoTrans, Op::NoTrans, m, rank, k, 1.0, Q.data(), m, U_tilde.data(), k, 0.0, U.data(), m);
                         LOG_F(1, "Finishing U = Q @ U_tilde on CPU");
                 }
+                profile_timer.accumulate_tag("gemm");
                 // Copying VT_cpu to VT
                 LOG_F(1, "Copying VT_cpu to VT");
                 VT.set(0, VT_cpu, 0, VT_cpu.size());
