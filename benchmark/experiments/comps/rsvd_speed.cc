@@ -56,7 +56,7 @@ protected:
         // Make subroutine objects
         // Stabilization Constructor - Choose default
         Stab<T> Stab(0);
-        int64_t passes_per_stablizer = 5;
+        int64_t passes_per_stablizer = 1;
         // RowSketcher constructor - Choose default (rs1)
         RS<T> RS(Stab, seed, n_subspace_iters, passes_per_stablizer, verbosity, cond_check, 0);
         // Orthogonalization Constructor - Choose CholQR.
@@ -78,6 +78,7 @@ protected:
         if (alloc == hamr::buffer_allocator::cuda)
             q = new lapack::Queue(0, 0);
         auto start_rsvd = high_resolution_clock::now();
+        cudaDeviceSynchronize();
         profile_timer.start_tag("rsvd");
         rsvd_obj.call(m, n, A, target_rank, n_oversamples, U, S, VT, q);
         if (q)
@@ -85,19 +86,19 @@ protected:
         auto stop_rsvd = high_resolution_clock::now();
         profile_timer.accumulate_tag("rsvd");
         long dur_rsvd = duration_cast<microseconds>(stop_rsvd - start_rsvd).count();
+        cudaDeviceSynchronize();
         LOG_F(INFO, "RSVD completed in %ld us", dur_rsvd);
         return dur_rsvd;
     }
 };
 
+// Test the speed of RSVD for different sized matrices, both for CPU and GPU implementation.
+// Also compares against blas::gesvd.
 TEST_F(RsvdSpeed, RsvdSpeed)
 {
 
-    // Generating various matrices
-
-    // hamr::buffer<T> A(alloc, m * n, 0.0);
-    // gen_mat_type<T>(m, n, A, k, seed, mat_type);
-
+    int seed = 217;
+    // Doesn't do anything, just warming up the GPU, as the GPU could be in a power saving / low frequency state.
     LOG_F(WARNING, "It takes dozens of seconds for the GPU to get out of sleep and power up. Warming up before measurement");
     {
         int n = 500;
@@ -107,7 +108,7 @@ TEST_F(RsvdSpeed, RsvdSpeed)
         CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
         A.synchronize();
         int target_rank = actual_rank + 5;
-        long t = test_rsvd<double>(n, n, actual_rank, target_rank, 271, A, 2);
+        long t = test_rsvd<double>(n, n, actual_rank, target_rank, seed, A, 2);
     }
 
     // Testing square matrices
@@ -127,77 +128,87 @@ TEST_F(RsvdSpeed, RsvdSpeed)
          << ","
          << "subspace_iters"
          << ","
-         << "time_us" << std::endl;
-
+         << "time_us" 
+         << ","
+         << "device" << std::endl;
+    // Test square matrices
     for (int n : square_matrice_size)
     {
         hamr::buffer<double> A(hamr::buffer_allocator::cpp, n * n, 0.0);
         int actual_rank = (int)(n * 0.1);
-        generate_random_low_rank_mat<double>(n, n, actual_rank, A, 271);
+        int target_rank = actual_rank + 5;
+        generate_random_low_rank_mat<double>(n, n, actual_rank, A, seed);
+
+        // Test gesvd
+        int m = n;
+        hamr::buffer<double> U_gold(hamr::buffer_allocator::cpp, m * m, 0.0);
+        hamr::buffer<double> S_gold(hamr::buffer_allocator::cpp, n, 0.0);
+        hamr::buffer<double> VT_gold(hamr::buffer_allocator::cpp, n * n, 0.0);
+        auto start_svd = high_resolution_clock::now();
+        lapack::gesvd(lapack::Job::AllVec, lapack::Job::AllVec, m, n, A.data(), m, S_gold.data(), U_gold.data(), m, VT_gold.data(), n);
+        auto stop_svd = high_resolution_clock::now();
+        long dur_svd = duration_cast<microseconds>(stop_svd - start_svd).count();
+        file << "square"
+            << ","
+            << "double"
+            << "," << n << "," << n << "," << -1 << "," << -1 << "," << dur_svd << ", gesvd CPU" << std::endl;
+
+        // CPU implementation
+        for(int cnt = 0; cnt < 2; cnt++) {
+            long t = test_rsvd<double>(n, n, actual_rank, target_rank, seed, A, 2);
+            cudaDeviceSynchronize();
+            file << "square"
+                << ","
+                << "double"
+                << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << ", CPU" << std::endl;
+        }
+
         CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
         A.synchronize();
-        int target_rank = actual_rank + 5;
-        long t = test_rsvd<double>(n, n, actual_rank, actual_rank + 5, 271, A, 2);
+        // GPU implementation
+        for(int cnt = 0; cnt < 2; cnt++) {
+            long t = test_rsvd<double>(n, n, actual_rank, target_rank, seed, A, 2);
+            cudaDeviceSynchronize();
         file << "square"
              << ","
              << "double"
-             << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << std::endl;
-        t = test_rsvd<double>(n, n, actual_rank, actual_rank + 5, 271, A, 5);
-        file << "square"
-             << ","
-             << "double"
-             << "," << n << "," << n << "," << target_rank << "," << 5 << "," << t << std::endl;
+             << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << ", GPU" << std::endl;
+        }
     }
-
+    // Test rectangular matrices
     for (int n : square_matrice_size)
     {
         hamr::buffer<double> A(hamr::buffer_allocator::cpp, n * n / 2, 0.0);
         int actual_rank = (int)(n * 0.1);
-        generate_random_low_rank_mat<double>(n, n / 2, actual_rank, A, 271);
-        CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
-        A.synchronize();
+        generate_random_low_rank_mat<double>(n, n / 2, actual_rank, A, seed);
         int target_rank = actual_rank + 5;
-        long t = test_rsvd<double>(n, n / 2, actual_rank, actual_rank + 5, 271, A, 2);
-        file << "rectangle"
-             << ","
-             << "double"
-             << "," << n << "," << n / 2 << "," << target_rank << "," << 2 << "," << t << std::endl;
-        t = test_rsvd<double>(n, n / 2, actual_rank, actual_rank + 5, 271, A, 5);
-        file << "rectangle"
-             << ","
-             << "double"
-             << "," << n << "," << n / 2 << "," << target_rank << "," << 5 << "," << t << std::endl;
-    }
+        // CPU implementation
+        for(int cnt = 0; cnt < 2; cnt++) {
+            long t = test_rsvd<double>(n, n / 2, actual_rank, target_rank, seed, A, 2);
+            file << "rectangle"
+                << ","
+                << "double"
+                << "," << n << "," << n / 2 << "," << target_rank << "," << 2 << "," << t << ", CPU" << std::endl;
+        }
 
-    for (int n : square_matrice_size)
-    {
-        hamr::buffer<float> A(hamr::buffer_allocator::cpp, n * n, 0.0);
-        int actual_rank = (int)(n * 0.1);
-        generate_random_low_rank_mat<float>(n, n, actual_rank, A, 271);
         CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
         A.synchronize();
-        int target_rank = actual_rank + 5;
-        long t = test_rsvd<float>(n, n, actual_rank, actual_rank + 5, 271, A, 2);
-        file << "square"
+        // GPU implementation
+        for(int cnt = 0; cnt < 2; cnt++) {
+            long t = test_rsvd<double>(n, n / 2, actual_rank, target_rank, seed, A, 2);
+            cudaDeviceSynchronize();
+        file << "rectangle"
              << ","
-             << "float"
-             << "," << n << "," << n << "," << target_rank << "," << 2 << "," << t << std::endl;
-        t = test_rsvd<float>(n, n, actual_rank, actual_rank + 5, 271, A, 5);
-        file << "square"
-             << ","
-             << "float"
-             << "," << n << "," << n << "," << target_rank << "," << 5 << "," << t << std::endl;
+             << "double"
+            << "," << n << "," << n / 2 << "," << target_rank << "," << 2 << "," << ", GPU" << std::endl;
+        }
     }
     file.close();
 }
 
 TEST_F(RsvdSpeed, Profile)
 {
-
-    // Generating various matrices
-
-    // hamr::buffer<T> A(alloc, m * n, 0.0);
-    // gen_mat_type<T>(m, n, A, k, seed, mat_type);
+    // Doesn't do anything, just warming up the GPU, as the GPU could be in a power saving / low frequency state.
     LOG_F(WARNING, "It takes dozens of seconds for the GPU to get out of sleep and power up. Warming up before measurement");
     {
         int n = 500;
@@ -209,6 +220,7 @@ TEST_F(RsvdSpeed, Profile)
         int target_rank = actual_rank + 5;
         long t = test_rsvd<double>(n, n, actual_rank, target_rank, 271, A, 2);
     }
+    // Enables verbose logging for loguru. See its doc for more detail.
     loguru::g_stderr_verbosity = 1;
     // Testing square matrices
     int n = 8000;
@@ -226,13 +238,10 @@ TEST_F(RsvdSpeed, Profile)
 }
 
 
+// Test the runtime of different subspace iteration settings.
 TEST_F(RsvdSpeed, SubspaceIteration)
 {
-
-    // Generating various matrices
-
-    // hamr::buffer<T> A(alloc, m * n, 0.0);
-    // gen_mat_type<T>(m, n, A, k, seed, mat_type);
+    // Doesn't do anything, just warming up the GPU, as the GPU could be in a power saving / low frequency state.
     LOG_F(WARNING, "It takes dozens of seconds for the GPU to get out of sleep and power up. Warming up before measurement");
     {
         int n = 500;
