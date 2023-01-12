@@ -118,7 +118,7 @@ TEST_F(TestRsvd, SimpleTest)
     // Make subroutine objects
     // Stabilization Constructor - Choose default
     Stab<double> Stab(0);
-    int64_t n_subspace_iters = 5, passes_per_stablizer = 1, n_oversamples = 5;
+    int64_t n_subspace_iters = 2, passes_per_stablizer = 1, n_oversamples = 5;
     // RowSketcher constructor - Choose default (rs1) (as well as the only implementation)
     RS<double> RS(Stab, seed, n_subspace_iters, passes_per_stablizer, verbosity, cond_check, 0);
     // Orthogonalization Constructor - Choose CholQR.
@@ -133,7 +133,7 @@ TEST_F(TestRsvd, SimpleTest)
     
     int64_t m = 100, n = 100;
     int64_t rank = 50;
-    int64_t target_rank = 5;
+    int64_t target_rank = 10;
     hamr::buffer_allocator alloc = hamr::buffer_allocator::cuda;
     hamr::buffer<double> A(alloc, m * n, 0.0);
     // polynomial decay tests:
