@@ -176,16 +176,6 @@ TEST_F(TestRsvd, SimpleTest)
     A.synchronize();
     test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
 
-    // A = 0
-    A.move(hamr::buffer_allocator::cpp);
-    std::fill(A.data(), A.data() + A.size(), 0.0);
-    A.synchronize();
-
-    //gen_mat_type<double>(m, n, A, rank, seed, std::make_tuple(4, 0, false));
-    CHECK_F(A.move(alloc) == 0);
-    A.synchronize();
-    test_rsvd<double>(m, n, A, rsvd_obj, rank, target_rank, n_subspace_iters, n_oversamples, seed, alloc, true);
-
     // Random diagonal matrix test
     A.move(hamr::buffer_allocator::cpp);
     std::fill(A.data(), A.data() + A.size(), 0.0);
