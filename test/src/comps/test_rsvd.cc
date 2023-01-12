@@ -100,10 +100,11 @@ protected:
         // A_reconstruct = U_tmp @ VT
         blas::gemm<T>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, n, 1.0, U_tmp.data(), m, VT.data(), n, 0, A_reconstruct.data(), m);
         // Calculate the Frobenius norm relative to the original matrix.
-        blas::axpy<T>(m * n, -1.0, A_reconstruct.data(), 1, A_reconstruct_gold.data(), 1);
-        T norm_orig = lapack::lange(lapack::Norm::Fro, m, n, A.data(), m);
-        T norm_diff = lapack::lange(lapack::Norm::Fro, m, n, A_reconstruct_gold.data(), m);
-        LOG_F(INFO, "Frobenius norm of the difference between reconstructions: %f; Norm of input: %f", norm_diff, norm_orig);
+        blas::axpy<T>(m * n, -1.0, A.data(), 1, A_reconstruct.data(), 1);
+        blas::axpy<T>(m * n, -1.0, A.data(), 1, A_reconstruct_gold.data(), 1);
+        T norm_diff_rsvd = lapack::lange(lapack::Norm::Fro, m, n, A_reconstruct.data(), m);
+        T norm_diff_gold = lapack::lange(lapack::Norm::Fro, m, n, A_reconstruct_gold.data(), m);
+        LOG_F(INFO, "Frobenius norm of the difference between reconstructions and input: RSVD: %f; Gold: %f; err: %f", norm_diff_rsvd, norm_diff_gold, norm_diff_rsvd/norm_diff_gold - 1);
         }
     }
 };
