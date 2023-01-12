@@ -190,3 +190,38 @@ TEST_F(RsvdSpeed, RsvdSpeed)
     }
     file.close();
 }
+
+TEST_F(RsvdSpeed, Profile)
+{
+
+    // Generating various matrices
+
+    // hamr::buffer<T> A(alloc, m * n, 0.0);
+    // gen_mat_type<T>(m, n, A, k, seed, mat_type);
+    LOG_F(WARNING, "It takes dozens of seconds for the GPU to get out of sleep and power up. Warming up before measurement");
+    {
+        int n = 500;
+        hamr::buffer<double> A(hamr::buffer_allocator::cpp, n * n, 0.0);
+        int actual_rank = (int)(n * 0.1);
+        generate_random_low_rank_mat<double>(n, n, actual_rank, A, 271);
+        CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
+        A.synchronize();
+        int target_rank = actual_rank + 5;
+        long t = test_rsvd<double>(n, n, actual_rank, target_rank, 271, A, 2);
+    }
+    loguru::g_stderr_verbosity = 1;
+    // Testing square matrices
+    int n = 8000;
+    hamr::buffer<double> A(hamr::buffer_allocator::cpp, n * n, 0.0);
+    int actual_rank = (int)(n * 0.1);
+    generate_random_low_rank_mat<double>(n, n, actual_rank, A, 271);
+    CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
+    A.synchronize();
+    int target_rank = actual_rank + 5;
+    profile_timer.clear();
+    long t = test_rsvd<double>(n, n, actual_rank, target_rank, 271, A, 2);
+    cudaDeviceSynchronize();
+    profile_timer.print();
+    loguru::g_stderr_verbosity = 0;
+}
+
