@@ -28,13 +28,6 @@ namespace RandLAPACK::comps::util {
     Timer profile_timer;
 }
 
-// rand (m, k) * rand(k, n) = (m, n) with a (approx) rank of k. k < min(m, n)
-template <typename T>
-static void gen_rand_mat(int m, int n, int k, hamr::buffer<T> &buff)
-{
-}
-
-
 class TestRsvd : public ::testing::Test
 {
 protected:
@@ -42,6 +35,7 @@ protected:
 
     virtual void TearDown(){};
 
+    // Calculates RSVD and exact SVD of a matrix. Then reconstruct the matrice using the RSVD results. Compare it with the best-rank-k reconstruction from the exact SVD.
     template <typename T>
     static void test_rsvd(int64_t m, int64_t n, hamr::buffer<T>& A, RSVD<T>& rsvd_obj, int64_t rank, int64_t target_rank, int64_t n_subspace_iters, int64_t n_oversamples, uint32_t seed, hamr::buffer_allocator alloc, bool check_diff = false)
     {
@@ -99,7 +93,7 @@ protected:
         blas::gemm<T>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, target_rank, 1.0, U.data(), m, S_diag.data(), target_rank, 0, U_tmp.data(), m);
         // A_reconstruct = U_tmp @ VT
         blas::gemm<T>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, n, 1.0, U_tmp.data(), m, VT.data(), n, 0, A_reconstruct.data(), m);
-        // Calculate the Frobenius norm relative to the original matrix.
+        // This calculates ||A_reconstruct - A|| / ||A_reconstruct_gold - A|| - 1
         blas::axpy<T>(m * n, -1.0, A.data(), 1, A_reconstruct.data(), 1);
         blas::axpy<T>(m * n, -1.0, A.data(), 1, A_reconstruct_gold.data(), 1);
         T norm_diff_rsvd = lapack::lange(lapack::Norm::Fro, m, n, A_reconstruct.data(), m);
@@ -136,7 +130,7 @@ TEST_F(TestRsvd, SimpleTest)
     int64_t target_rank = 10;
     hamr::buffer_allocator alloc = hamr::buffer_allocator::cuda;
     hamr::buffer<double> A(alloc, m * n, 0.0);
-    // polynomial decay tests:
+    // Tests for various types of matrices:
     // Fast polynomial decay test
     A.move(hamr::buffer_allocator::cpp);
     std::fill(A.data(), A.data() + A.size(), 0.0);
