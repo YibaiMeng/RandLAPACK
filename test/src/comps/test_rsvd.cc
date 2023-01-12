@@ -55,7 +55,7 @@ protected:
         if (alloc == hamr::buffer_allocator::cuda)
             q = new lapack::Queue(0, 0);
         auto start_rsvd = high_resolution_clock::now();
-        rsvd_obj.call(m, n, A, target_rank, n_oversamples, n_subspace_iters, U, S, VT, q);
+        rsvd_obj.call(m, n, A, target_rank, n_oversamples, U, S, VT, q);
         if (q)
             q->sync();
         auto stop_rsvd = high_resolution_clock::now();

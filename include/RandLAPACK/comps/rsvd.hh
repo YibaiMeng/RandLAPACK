@@ -19,7 +19,6 @@ namespace RandLAPACK::comps::rsvd
                     hamr::buffer<T> &A,       // Input matrix
                     int64_t rank,             // Target rank apporximation.
                     int64_t n_oversamples,    // Oversampling parameter
-                    int64_t n_subspace_iters, // Number of power iterations.
                     hamr::buffer<T> &U,
                     hamr::buffer<T> &S,
                     hamr::buffer<T> &VT,
@@ -49,7 +48,6 @@ namespace RandLAPACK::comps::rsvd
                     hamr::buffer<T> &A,       // Input matrix
                     int64_t rank,             // Target rank apporximation.
                     int64_t n_oversamples,    // Oversampling parameter
-                    int64_t n_subspace_iters, // Number of power iterations.
                     hamr::buffer<T> &U,
                     hamr::buffer<T> &S,
                     hamr::buffer<T> &VT, 

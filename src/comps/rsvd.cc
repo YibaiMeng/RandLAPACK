@@ -17,7 +17,6 @@ namespace RandLAPACK::comps::rsvd
             hamr::buffer<T> &A,       // Input matrix
             int64_t rank,             // Target rank apporximation.
             int64_t n_oversamples,    // Oversampling parameter
-            int64_t n_subspace_iters, // Number of power iterations.
             hamr::buffer<T> &U,
             hamr::buffer<T> &S,
             hamr::buffer<T> &VT, 
@@ -120,6 +119,6 @@ namespace RandLAPACK::comps::rsvd
                 LOG_F(1, "Copied VT_cpu to VT");
         }
 
-        template void RSVD<float>::call(int64_t m, int64_t n, hamr::buffer<float> &A, int64_t, int64_t, int64_t, hamr::buffer<float> &U, hamr::buffer<float> &S, hamr::buffer<float> &VT, lapack::Queue* q);
-        template void RSVD<double>::call(int64_t m, int64_t n, hamr::buffer<double> &A, int64_t, int64_t, int64_t, hamr::buffer<double> &U, hamr::buffer<double> &S, hamr::buffer<double> &VT, lapack::Queue* q);
+        template void RSVD<float>::call(int64_t m, int64_t n, hamr::buffer<float> &A, int64_t, int64_t, hamr::buffer<float> &U, hamr::buffer<float> &S, hamr::buffer<float> &VT, lapack::Queue* q);
+        template void RSVD<double>::call(int64_t m, int64_t n, hamr::buffer<double> &A, int64_t, int64_t, hamr::buffer<double> &U, hamr::buffer<double> &S, hamr::buffer<double> &VT, lapack::Queue* q);
 } // end namespace rsvd
