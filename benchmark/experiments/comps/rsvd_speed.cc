@@ -262,3 +262,37 @@ TEST_F(RsvdSpeed, SubspaceIteration)
     }
     loguru::g_stderr_verbosity = 0;
 }
+
+// Microbenchmark to check GEMM speed of blaspp's chosen CPU implementation, 
+// and blaspp's cuBLAS wrapper.
+TEST_F(RsvdSpeed, GemmMicrobench)
+{
+        int m = 8000, n = 8000, k = 8000;
+        hamr::buffer<double> src_1(hamr::buffer_allocator::cpp, m * k, 0.0), src_2(hamr::buffer_allocator::cpp, k * n, 0.0);
+        hamr::buffer<double> A(hamr::buffer_allocator::cpp, m * n, 0.0);
+        int seed = 271;
+        RandBLAS::dense_op::gen_rmat_norm<double>(m, k, src_1.data(), seed);
+        RandBLAS::dense_op::gen_rmat_norm<double>(k, n, src_2.data(), seed + 1);
+        {
+        auto start_gemm = high_resolution_clock::now();
+        blas::gemm<double>(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, k, 1.0, src_1.data(), m, src_2.data(), k, 0, A.data(), m);
+        auto stop_gemm = high_resolution_clock::now();
+        long dur_gemm = duration_cast<microseconds>(stop_gemm - start_gemm).count();
+        LOG_F(INFO, "mkl BLAS: %ld us", dur_gemm);
+        }
+        CHECK_F(src_1.move(hamr::buffer_allocator::cuda) == 0);
+        CHECK_F(src_2.move(hamr::buffer_allocator::cuda) == 0);
+        CHECK_F(A.move(hamr::buffer_allocator::cuda) == 0);
+        src_1.synchronize();
+        src_2.synchronize();
+        A.synchronize();
+        blas::Queue q(0,0);
+        {
+        auto start_gemm = high_resolution_clock::now();
+        blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, m, n, k, 1.0, src_1.data(), m, src_2.data(), k, 0, A.data(), m, q);
+        q.sync();
+        auto stop_gemm = high_resolution_clock::now();
+        long dur_gemm = duration_cast<microseconds>(stop_gemm - start_gemm).count();
+        LOG_F(INFO, "cuBLAS: %ld us", dur_gemm);
+        }
+}
