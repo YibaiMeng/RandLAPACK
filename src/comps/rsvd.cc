@@ -83,9 +83,10 @@ namespace RandLAPACK::comps::rsvd
                    queue->sync();
                    LOG_F(1, "B = Q.T @ A completed on GPU");
                 }
-                auto ptr = B.get_cpu_accessible();
+                CHECK_F(B.move(hamr::buffer_allocator::cpp) == 0);
                 CHECK_F(S.move(hamr::buffer_allocator::cpp) == 0);
                 S.synchronize();
+                B.synchronize();
                 LOG_F(1, "Starting U_tilde, S, VT_cpu = gesvd(B)");
                 profile_timer.start_tag("svd");
                 gesvd(lapack::Job::AllVec, lapack::Job::AllVec, k, n, ptr.get(), k, S.data(), U_tilde.data(), k, VT_cpu.data(), n);
