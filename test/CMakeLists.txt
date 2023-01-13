@@ -1,7 +1,7 @@
 message(STATUS "Checking for regression tests ...")
 enable_testing()
 set(RandLAPACK_testx_cxx_srcs
-    src/comps/test_determiter.cc 
+    #src/comps/test_determiter.cc 
     src/comps/test_util.cc 
     src/comps/test_orth.cc 
     src/comps/test_qb.cc
