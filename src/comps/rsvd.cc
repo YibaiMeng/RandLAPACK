@@ -89,8 +89,8 @@ namespace RandLAPACK::comps::rsvd
                 B.synchronize();
                 LOG_F(1, "Starting U_tilde, S, VT_cpu = gesvd(B)");
                 profile_timer.start_tag("svd");
-                gesvd(lapack::Job::AllVec, lapack::Job::AllVec, k, n, ptr.get(), k, S.data(), U_tilde.data(), k, VT_cpu.data(), n);
-                profile_timer.accumulate_tag("svd"      );
+                gesvd(Job::AllVec, Job::AllVec, (int64_t)k, (int64_t)n, B.data(), (int64_t)k, S.data(), U_tilde.data(), (int64_t)k, VT_cpu.data(), (int64_t)n);
+                profile_timer.accumulate_tag("svd");
                 LOG_F(1, "Finished U_tilde, S, VT_cpu = gesvd(B)");
                 CHECK_F(U_tilde.move(A.get_allocator()) == 0);
                 // TODO: test out HAMR's sync behavior regarding memory and computation?
